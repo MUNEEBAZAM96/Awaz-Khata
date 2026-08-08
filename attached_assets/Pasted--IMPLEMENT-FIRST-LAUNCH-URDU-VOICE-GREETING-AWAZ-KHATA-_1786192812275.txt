@@ -1,0 +1,780 @@
+# IMPLEMENT FIRST-LAUNCH URDU VOICE GREETING — AWAZ KHATA
+
+Implement a **first-time welcome voice experience** for Awaz Khata.
+
+The goal is to make the very first launch feel like the user is meeting a personal Urdu financial assistant.
+
+This is NOT a normal splash screen.
+
+It should feel like:
+
+> **The app is speaking directly to the user for the first time.**
+
+---
+
+# 1. FIRST-LAUNCH BEHAVIOR
+
+When the user opens Awaz Khata for the first time:
+
+```text
+App opens
+   ↓
+Welcome screen
+   ↓
+Animated microphone / voice orb
+   ↓
+Generate Urdu greeting using existing /api/speak
+   ↓
+Play greeting using existing audio playback system
+   ↓
+Greeting finishes
+   ↓
+Smooth transition to Home
+```
+
+The greeting should only automatically play **once per installation/local app state**.
+
+Do not play it every time the user opens the app.
+
+---
+
+# 2. GREETING TEXT
+
+Use this Urdu greeting:
+
+> السلام علیکم! آواز کھاتہ میں خوش آمدید۔ میں آپ کا ذاتی مالی معاون ہوں۔ آپ مجھ سے اپنے پیسوں کے بارے میں بات کر سکتے ہیں۔
+
+The greeting should sound natural when spoken by Uplift AI.
+
+Do NOT make the sentence unnecessarily long.
+
+The purpose is simply to introduce:
+
+* the app
+* the voice interaction
+* the financial-assistant concept
+
+---
+
+# 3. WELCOME SCREEN
+
+Create a dedicated first-launch component/screen.
+
+For example:
+
+```text
+components/WelcomeVoiceIntro.tsx
+```
+
+or an appropriate location based on the existing architecture.
+
+The screen should have:
+
+```text
+┌─────────────────────────────────┐
+│                                 │
+│                                 │
+│          آواز کھاتہ             │
+│                                 │
+│             ◉                   │
+│          🎙️                    │
+│                                 │
+│       السلام علیکم!             │
+│                                 │
+│  آواز کھاتہ میں خوش آمدید۔      │
+│                                 │
+│  میں آپ کا ذاتی مالی معاون ہوں۔ │
+│                                 │
+│                                 │
+│        ◉  بول رہا ہوں...       │
+│                                 │
+└─────────────────────────────────┘
+```
+
+Do not copy this layout literally.
+
+Create a polished, modern design consistent with the existing Awaz Khata UI.
+
+---
+
+# 4. VISUAL DESIGN
+
+Use the existing Awaz Khata design system.
+
+Use:
+
+* NativeWind
+* rounded shapes
+* subtle gradients
+* soft shadows
+* premium spacing
+* high contrast
+* Urdu RTL-friendly typography
+
+The welcome screen should feel more special than the normal Home screen.
+
+Use the primary brand gradient.
+
+For example:
+
+```text
+#5B4BFF
+→
+#8B7CFF
+```
+
+Do not introduce a completely different visual language.
+
+---
+
+# 5. VOICE ORB / MICROPHONE
+
+Create a large animated central microphone/orb.
+
+This should visually represent that the app is speaking.
+
+Example:
+
+```text
+        soft glow
+      ┌─────────┐
+      │         │
+      │   🎙️   │
+      │         │
+      └─────────┘
+```
+
+Use a circular design.
+
+Add:
+
+* soft glow
+* subtle shadow
+* gradient
+* pulse animation
+
+---
+
+# 6. SPEAKING ANIMATION
+
+While Uplift TTS is playing:
+
+Animate the orb.
+
+Use a subtle breathing/pulse effect:
+
+```text
+scale:
+1.00
+ ↓
+1.05
+ ↓
+1.00
+```
+
+Duration:
+
+approximately 1500–2000ms.
+
+Also create subtle outer rings:
+
+```text
+       ◯
+     ◯   ◯
+   ◯   🎙️  ◯
+     ◯   ◯
+       ◯
+```
+
+The rings should:
+
+* expand
+* fade
+* repeat
+
+Do not make the animation distracting.
+
+The goal is to visually communicate:
+
+> The app is talking.
+
+---
+
+# 7. AUDIO STATE
+
+Create a small state machine:
+
+```text
+welcome-loading
+welcome-speaking
+welcome-finished
+welcome-error
+```
+
+### welcome-loading
+
+Show:
+
+```text
+تیار ہو رہا ہوں...
+```
+
+while `/api/speak` is being called.
+
+### welcome-speaking
+
+Show:
+
+```text
+آپ سے بات کر رہا ہوں...
+```
+
+while the audio is playing.
+
+### welcome-finished
+
+Transition to Home.
+
+### welcome-error
+
+Do NOT block the user from using the app.
+
+If TTS fails:
+
+```text
+السلام علیکم! 👋
+
+آواز کھاتہ میں خوش آمدید۔
+
+چلیں، آپ کا حساب شروع کرتے ہیں۔
+```
+
+Then show:
+
+```text
+شروع کریں
+```
+
+and allow the user to enter the Home screen.
+
+---
+
+# 8. USE THE EXISTING SPEAK API
+
+Do NOT call Uplift AI directly from the frontend.
+
+Use the existing API service.
+
+The flow must be:
+
+```text
+Frontend
+   ↓
+POST /api/speak
+   ↓
+Backend
+   ↓
+Uplift AI TTS
+   ↓
+Backend returns audio
+   ↓
+Frontend
+   ↓
+Expo audio playback
+```
+
+Reuse the existing `api.js` service.
+
+If a `speak()` method already exists, reuse it.
+
+Do not create duplicate API logic.
+
+---
+
+# 9. AUDIO PLAYBACK
+
+Reuse the existing audio playback implementation.
+
+Do not create a second unrelated audio system.
+
+The playback lifecycle should be:
+
+```text
+request TTS
+   ↓
+receive audio
+   ↓
+create Sound
+   ↓
+play
+   ↓
+monitor playback
+   ↓
+when finished:
+    unload sound
+    update state
+    transition Home
+```
+
+Make sure audio resources are properly unloaded.
+
+Avoid memory leaks.
+
+---
+
+# 10. IMPORTANT — AUTOPLAY ROBUSTNESS
+
+The greeting should attempt to play automatically on first launch.
+
+However, mobile platforms can sometimes restrict or interfere with autoplay behavior.
+
+Implement graceful handling.
+
+If playback cannot start automatically:
+
+Show:
+
+```text
+السلام علیکم 👋
+
+آواز کھاتہ میں خوش آمدید۔
+
+▶️ تعارف سنیں
+```
+
+The user can tap the button to start playback.
+
+Do NOT leave the user stuck on the welcome screen.
+
+---
+
+# 11. SKIP BUTTON
+
+Add a small secondary option:
+
+```text
+بعد میں
+```
+
+or:
+
+```text
+Skip
+```
+
+Prefer Urdu:
+
+```text
+بعد میں
+```
+
+If the user taps it:
+
+* stop any current audio
+* unload the sound
+* mark the welcome experience as completed
+* navigate to Home
+
+The skip button should NOT visually compete with the main experience.
+
+It can be a small text button near the bottom.
+
+---
+
+# 12. LOCAL FIRST-LAUNCH FLAG
+
+Use local device storage to remember whether the greeting has already been completed.
+
+Use an Expo-compatible storage solution already present in the project.
+
+If no storage solution exists, use:
+
+```text
+@react-native-async-storage/async-storage
+```
+
+if compatible with the project's Expo SDK.
+
+Use a key such as:
+
+```text
+awaz_khata_welcome_completed
+```
+
+Possible value:
+
+```text
+"true"
+```
+
+Flow:
+
+```text
+App launch
+   ↓
+Check local flag
+   ↓
+false / missing
+   ↓
+Show welcome
+   ↓
+Greeting finishes
+   ↓
+Set flag true
+   ↓
+Home
+```
+
+If:
+
+```text
+true
+```
+
+then skip the welcome experience completely.
+
+---
+
+# 13. DO NOT USE THE DATABASE FOR THIS
+
+The first-launch greeting flag is purely UI/onboarding state.
+
+Do NOT store it in the backend.
+
+Do NOT create an API endpoint for it.
+
+Do NOT modify the financial transaction model.
+
+Do NOT involve the database.
+
+---
+
+# 14. ANIMATION INTO HOME
+
+When the greeting finishes:
+
+Do not suddenly replace the screen.
+
+Create a smooth transition.
+
+Suggested sequence:
+
+```text
+Voice orb
+    ↓
+scale down slightly
+    ↓
+fade
+    ↓
+welcome content fades
+    ↓
+Home appears
+```
+
+Duration:
+
+approximately 300–500ms.
+
+If Expo Router is already configured with transitions, use the existing navigation system.
+
+Do not add a large navigation dependency just for this.
+
+---
+
+# 15. BRAND MOMENT
+
+During the welcome experience, show:
+
+```text
+آواز کھاتہ
+```
+
+with a small subtitle:
+
+```text
+آپ کے پیسوں کی آواز
+```
+
+This can become the product's brand line.
+
+Keep it subtle.
+
+---
+
+# 16. WELCOME MESSAGE UI
+
+While the app speaks, display the text visually.
+
+Use:
+
+```text
+السلام علیکم!
+
+آواز کھاتہ میں خوش آمدید۔
+
+میں آپ کا ذاتی مالی معاون ہوں۔
+آپ مجھ سے اپنے پیسوں کے بارے میں
+بات کر سکتے ہیں۔
+```
+
+Make the Urdu typography beautiful and readable.
+
+Use RTL alignment.
+
+Do not put the entire message into a tiny card.
+
+Give it breathing room.
+
+---
+
+# 17. SPEAKING INDICATOR
+
+Below the greeting:
+
+```text
+● آپ سے بات کر رہا ہوں...
+```
+
+The dot should pulse.
+
+Example:
+
+```text
+●
+```
+
+animation:
+
+```text
+opacity:
+0.4 → 1 → 0.4
+```
+
+This provides a clear indication that audio is playing.
+
+---
+
+# 18. AUDIO COMPLETION
+
+When the audio finishes:
+
+1. Update state to `welcome-finished`.
+2. Mark welcome as completed.
+3. Unload the audio.
+4. Wait approximately 200–300ms if necessary.
+5. Navigate to Home.
+6. Home should start in `idle`.
+7. Do NOT automatically start the microphone.
+
+The user should arrive at Home ready to interact.
+
+---
+
+# 19. ERROR HANDLING
+
+If `/api/speak` fails:
+
+Do NOT display:
+
+```text
+AxiosError
+Network Error
+500 Internal Server Error
+```
+
+Instead show:
+
+```text
+معذرت، آواز ابھی دستیاب نہیں۔
+
+آپ ابھی بھی ایپ استعمال کر سکتے ہیں۔
+```
+
+Then provide:
+
+```text
+شروع کریں
+```
+
+The app must remain usable.
+
+---
+
+# 20. PREVENT DUPLICATE PLAYBACK
+
+This is important.
+
+React components can mount more than once during development or navigation.
+
+Make sure the greeting does NOT play twice.
+
+Use appropriate guards/ref/state.
+
+For example, conceptually:
+
+```text
+hasStartedRef
+```
+
+or an equivalent mechanism.
+
+The greeting should only trigger once during that welcome session.
+
+---
+
+# 21. HANDLE APP BACKGROUNDING
+
+If the user backgrounds the app while the greeting is playing:
+
+Handle the audio lifecycle gracefully.
+
+Do not create multiple Sound instances.
+
+If the audio is interrupted:
+
+* clean up
+* allow the user to continue
+* do not crash
+* do not restart repeatedly
+
+---
+
+# 22. ACCESSIBILITY
+
+The microphone/orb should have an accessible label.
+
+Example:
+
+```text
+"آواز کھاتہ کا تعارف"
+```
+
+Skip button:
+
+```text
+"تعارف چھوڑیں"
+```
+
+Start button:
+
+```text
+"تعارف سنیں"
+```
+
+---
+
+# 23. FIRST-LAUNCH EXPERIENCE
+
+The final experience should feel like:
+
+```text
+USER OPENS APP
+       ↓
+Beautiful Awaz Khata branding
+       ↓
+Animated microphone appears
+       ↓
+"السلام علیکم!"
+       ↓
+Uplift AI speaks naturally in Urdu
+       ↓
+Orb animates while speaking
+       ↓
+Greeting finishes
+       ↓
+Smooth transition
+       ↓
+HOME
+       ↓
+"آج کا حساب کیا ہے؟"
+       ↓
+Large microphone
+```
+
+This should take only a few seconds.
+
+Do NOT create a long onboarding flow.
+
+---
+
+# 24. DO NOT ASK FOR PERMISSIONS UNNECESSARILY
+
+Do not request microphone permission during the welcome greeting.
+
+The microphone permission should be requested when the user actually taps the microphone to record.
+
+The welcome greeting is output audio only.
+
+This keeps the first launch frictionless.
+
+---
+
+# 25. FINAL QUALITY CHECK
+
+After implementation, verify:
+
+### First launch
+
+* [ ] Welcome appears.
+* [ ] Urdu greeting is visible.
+* [ ] TTS request works.
+* [ ] Uplift-generated audio plays.
+* [ ] Speaking animation works.
+* [ ] Audio completion is detected.
+* [ ] Welcome flag is saved.
+* [ ] Home appears smoothly.
+
+### Second launch
+
+* [ ] Welcome does NOT appear.
+* [ ] App opens directly to Home.
+
+### TTS failure
+
+* [ ] User sees friendly Urdu error.
+* [ ] User can continue.
+* [ ] App does not freeze.
+
+### Skip
+
+* [ ] Audio stops.
+* [ ] Welcome flag is saved.
+* [ ] Home opens.
+
+### Audio
+
+* [ ] Sound is unloaded after playback.
+* [ ] No duplicate playback.
+* [ ] No duplicate Sound instances.
+* [ ] No memory leaks.
+
+### UI
+
+* [ ] Urdu is RTL-friendly.
+* [ ] Animation is smooth.
+* [ ] No layout overflow.
+* [ ] Works on small phones.
+* [ ] Works on large phones.
+* [ ] Existing Home voice functionality remains intact.
+
+---
+
+# FINAL PRODUCT EXPERIENCE
+
+The first time someone opens Awaz Khata, they should immediately understand:
+
+> **"This app talks to me in Urdu."**
+
+The greeting should not feel like a generic app notification.
+
+It should feel like the assistant is introducing itself.
+
+The experience should communicate the product's core promise:
+
+# "آپ بولیں، آواز کھاتہ حساب رکھے۔"
+
+Do not overcomplicate this feature.
+
+Make it:
+
+**Fast + warm + natural + Urdu + animated + reliable.**

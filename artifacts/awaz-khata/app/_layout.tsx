@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { WelcomeVoiceIntro } from '@/components/WelcomeVoiceIntro';
 import { setBaseUrl } from '@workspace/api-client-react';
 import {
   Inter_400Regular,
@@ -62,6 +63,8 @@ export default function RootLayout() {
           <GestureHandlerRootView>
             <KeyboardProvider>
               <RootLayoutNav />
+              {/* First-launch voice greeting — overlays Home once, then never again. */}
+              <WelcomeVoiceIntro />
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

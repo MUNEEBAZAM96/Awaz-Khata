@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { fonts, urduLine } from '@/constants/typography';
@@ -24,9 +24,11 @@ export function activityLabel(t: Transaction): string {
 
 interface Props {
   transactions: Transaction[];
+  /** Navigates to the full ledger. */
+  onSeeAll?: () => void;
 }
 
-export function ActivityList({ transactions }: Props) {
+export function ActivityList({ transactions, onSeeAll }: Props) {
   const colors = useColors();
 
   if (transactions.length === 0) {
@@ -44,9 +46,23 @@ export function ActivityList({ transactions }: Props) {
 
   return (
     <View style={styles.list}>
-      <Text style={[styles.heading, { color: colors.mutedForeground }]}>
-        حالیہ سرگرمیاں
-      </Text>
+      <View style={styles.headingRow}>
+        <Text style={[styles.heading, { color: colors.mutedForeground }]}>
+          حالیہ سرگرمیاں
+        </Text>
+        {onSeeAll ? (
+          <Pressable
+            onPress={onSeeAll}
+            hitSlop={10}
+            style={({ pressed }) => [styles.seeAll, { opacity: pressed ? 0.6 : 1 }]}
+          >
+            <Text style={[styles.seeAllText, { color: colors.primary }]}>
+              دیکھیں سب
+            </Text>
+            <Feather name="chevron-left" size={14} color={colors.primary} />
+          </Pressable>
+        ) : null}
+      </View>
       {transactions.slice(0, 3).map((t) => {
         const isOut = t.type === 'expense' || t.type === 'given';
         const tint = isOut ? colors.destructive : colors.success;
@@ -82,11 +98,28 @@ const styles = StyleSheet.create({
   list: {
     gap: 8,
   },
+  headingRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   heading: {
     fontSize: 13,
     lineHeight: urduLine(13),
     fontFamily: fonts.urdu,
     textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  seeAll: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 2,
+    minHeight: 32,
+  },
+  seeAllText: {
+    fontSize: 12,
+    lineHeight: urduLine(12),
+    fontFamily: fonts.urduMedium,
     writingDirection: 'rtl',
   },
   row: {

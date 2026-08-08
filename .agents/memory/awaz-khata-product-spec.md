@@ -9,3 +9,7 @@ description: Hackathon product-spec direction for the voice ledger — storage r
 **Why:** The user uploaded a full product spec (attached_assets/Pasted--UPDATE-EXISTING-PROJECT-Awaz-Khata-*.txt) that is the authoritative direction for the hackathon demo; it overrode an earlier "کامیابی سے محفوظ" confirmation style and vetoed a planned database migration.
 
 **How to apply:** Read that spec file before changing backend storage, voice-flow wording, or the mobile voice pipeline.
+
+## First-launch greeting
+- Onboarding state (welcome-completed flag) is device-local AsyncStorage only — spec explicitly forbids backend/API/DB involvement for it.
+- Web autoplay is blocked without a gesture: the welcome intro must offer a «تعارف سنیں» tap-to-play path on web; only native may auto-play TTS.

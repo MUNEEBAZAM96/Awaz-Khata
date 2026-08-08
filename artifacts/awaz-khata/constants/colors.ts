@@ -53,6 +53,19 @@ const colors = {
     // Borders and input outlines
     border: '#DCD3BF',
     input: '#DCD3BF',
+
+    // Gradient stops for hero surfaces (mic, today-summary card).
+    // Deep → bright emerald reads as "illuminated ledger ink".
+    primaryDeep: '#0A4A38',
+    primaryBright: '#15745A',
+    recordingDeep: '#A32E21',
+    recordingBright: '#D0503F',
+    accentDeep: '#B08D1E',
+    accentBright: '#D9B33C',
+
+    // Ultra-soft decorative blobs for screen backgrounds
+    blobGreen: 'rgba(14, 95, 73, 0.05)',
+    blobGold: 'rgba(201, 162, 39, 0.07)',
   },
 
   // Border radius (in px)

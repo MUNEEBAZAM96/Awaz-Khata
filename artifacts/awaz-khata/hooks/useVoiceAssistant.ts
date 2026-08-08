@@ -23,6 +23,12 @@ import { playBase64Audio, stopPlayback } from '@/lib/audio';
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
+/** Structured payload behind the current reply, for richer result cards. */
+export interface ReplyMeta {
+  kind: 'transaction' | 'query';
+  result?: Record<string, unknown>;
+}
+
 /** One completed voice exchange kept in session memory (no persistence, per spec). */
 export interface VoiceInteraction {
   id: string;
@@ -61,6 +67,7 @@ export function useVoiceAssistant() {
   const [state, setState] = useState<VoiceState>('idle');
   const [transcript, setTranscript] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
+  const [replyMeta, setReplyMeta] = useState<ReplyMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [interactions, setInteractions] = useState<VoiceInteraction[]>([]);
   const busyRef = useRef(false);
@@ -137,6 +144,7 @@ export function useVoiceAssistant() {
           if (userText) {
             setTranscript(null);
             setReply(null);
+            setReplyMeta(null);
           }
           setState('idle');
         }
@@ -145,20 +153,14 @@ export function useVoiceAssistant() {
     [appendInteraction],
   );
 
-  const process = useCallback(
-    async (uri: string) => {
-      // Capture the run's generation; cancel() bumps the ref, making
-      // active() false for this run from that point on.
-      const gen = generationRef.current;
-      const active = () => generationRef.current === gen;
-
-      setState('processing');
-      setError(null);
+  /**
+   * Intent → action → spoken result for an Urdu utterance. Shared by the
+   * voice pipeline (after STT) and text-triggered asks (suggestion pills).
+   * Handles its own errors; never throws.
+   */
+  const handleText = useCallback(
+    async (text: string, active: () => boolean) => {
       try {
-        const text = await transcribeRecording(uri);
-        if (!active()) return;
-        setTranscript(text);
-
         const intent = await extractIntent({ text });
         if (!active()) return; // bail before any side effect (no save after blur)
 
@@ -186,6 +188,7 @@ export function useVoiceAssistant() {
             appendInteraction(text, saved.responseText);
             return;
           }
+          setReplyMeta({ kind: 'transaction' });
           await speakAndFinish(saved.responseText, text, active);
           return;
         }
@@ -198,6 +201,12 @@ export function useVoiceAssistant() {
             category: intent.category ?? null,
           });
           if (!active()) return; // read-only — nothing to record
+          setReplyMeta({
+            kind: 'query',
+            result: (outcome.result ?? undefined) as
+              | Record<string, unknown>
+              | undefined,
+          });
           await speakAndFinish(outcome.responseText, text, active);
           return;
         }
@@ -219,6 +228,61 @@ export function useVoiceAssistant() {
     [queryClient, speakAndFinish, appendInteraction],
   );
 
+  const process = useCallback(
+    async (uri: string, active: () => boolean) => {
+      // `active` was captured by the caller BEFORE any await (including
+      // recorder.stop()), so a cancel() during any of those awaits makes
+      // it false for this entire run.
+      if (!active()) return;
+      setState('processing');
+      setError(null);
+      setReplyMeta(null);
+      let text: string;
+      try {
+        text = await transcribeRecording(uri);
+        if (!active()) return;
+        setTranscript(text);
+      } catch (err) {
+        if (!active()) return;
+        const message = urduErrorFrom(err);
+        setError(message);
+        if (message !== NETWORK_ERROR) {
+          await speakAndFinish(message, undefined, active);
+        } else {
+          setState('idle');
+        }
+        return;
+      }
+      await handleText(text, active);
+    },
+    [handleText, speakAndFinish],
+  );
+
+  /**
+   * Run a suggestion/typed question through the same pipeline as speech,
+   * skipping STT. Only starts from idle; shows the text as the transcript
+   * so the flow reads identically to a spoken exchange.
+   */
+  const ask = useCallback(
+    async (text: string) => {
+      if (busyRef.current || stateRef.current !== 'idle') return;
+      busyRef.current = true;
+      const gen = generationRef.current;
+      const active = () => generationRef.current === gen;
+      try {
+        setState('processing');
+        setError(null);
+        setReply(null);
+        setReplyMeta(null);
+        setTranscript(text);
+        await handleText(text, active);
+      } finally {
+        busyRef.current = false;
+      }
+    },
+    [handleText],
+  );
+
   /** Tap handler for the mic button: idle → listening → processing → speaking → idle. */
   const toggle = useCallback(async () => {
     if (busyRef.current) return;
@@ -237,6 +301,7 @@ export function useVoiceAssistant() {
         setError(null);
         setTranscript(null);
         setReply(null);
+        setReplyMeta(null);
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
         await recorder.prepareToRecordAsync();
         recorder.record();
@@ -252,26 +317,44 @@ export function useVoiceAssistant() {
 
     if (state === 'listening') {
       busyRef.current = true;
+      // Capture the run token BEFORE awaiting recorder.stop() — a blur/cancel
+      // during that await must kill this run, not just an already-started
+      // pipeline. cancel() bumps the ref, making active() false from then on.
+      const gen = generationRef.current;
+      const active = () => generationRef.current === gen;
       try {
         if (Platform.OS !== 'web') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
         await recorder.stop();
+        if (!active()) return; // cancelled while stopping — discard recording
         const uri = recorder.uri;
         if (!uri) {
           setError('ریکارڈنگ محفوظ نہیں ہوئی، دوبارہ کوشش کریں۔');
           setState('idle');
           return;
         }
-        await process(uri);
+        await process(uri, active);
       } catch {
-        setError(GENERIC_ERROR);
-        setState('idle');
+        if (active()) {
+          setError(GENERIC_ERROR);
+          setState('idle');
+        }
       } finally {
         busyRef.current = false;
       }
     }
   }, [state, recorder, process]);
 
-  return { state, transcript, reply, error, interactions, toggle, cancel };
+  return {
+    state,
+    transcript,
+    reply,
+    replyMeta,
+    error,
+    interactions,
+    toggle,
+    ask,
+    cancel,
+  };
 }
