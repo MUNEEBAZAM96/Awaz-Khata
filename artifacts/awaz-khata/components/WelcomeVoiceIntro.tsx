@@ -9,7 +9,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { speakText } from '@workspace/api-client-react';
@@ -17,10 +16,9 @@ import { useColors } from '@/hooks/useColors';
 import { fonts, urduLine } from '@/constants/typography';
 import { playBase64Audio, stopPlayback } from '@/lib/audio';
 
-const STORAGE_KEY = 'awaz_khata_welcome_completed';
-
 // Module-level guard: survives StrictMode unmount/remount in dev, so the
-// greeting can never auto-play twice in one app session.
+// greeting can never auto-play twice in one app session. Resets on every
+// refresh/app launch — the assistant greets on each open by design.
 let sessionStarted = false;
 
 const GREETING_TEXT =
@@ -33,7 +31,7 @@ const GREETING_LINES = [
 ];
 
 type IntroState =
-  | 'checking' // reading the first-launch flag
+  | 'checking' // brief pre-render beat before the intro content mounts
   | 'ready' // waiting for a tap to start playback (web autoplay rules)
   | 'loading' // fetching TTS audio
   | 'speaking' // greeting is playing
@@ -138,9 +136,6 @@ export function WelcomeVoiceIntro() {
   /** Mark completed and fade the whole overlay into Home. */
   const finish = useCallback(() => {
     setState('hiding');
-    AsyncStorage.setItem(STORAGE_KEY, 'true').catch(() => {
-      // Storage failure just means the greeting may play again next launch.
-    });
     orbScale.value = withTiming(0.85, { duration: 400, easing: Easing.in(Easing.quad) });
     overlayOpacity.value = withTiming(0, { duration: 400, easing: Easing.in(Easing.quad) });
     setTimeout(() => {
@@ -169,37 +164,25 @@ export function WelcomeVoiceIntro() {
     }
   }, [finish]);
 
-  // First-launch check + audio prefetch.
+  // The assistant introduces itself on EVERY app open/refresh (by design) —
+  // prefetch the TTS audio, then autoplay on native or wait for a tap on web.
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      let completed = false;
-      try {
-        completed = (await AsyncStorage.getItem(STORAGE_KEY)) === 'true';
-      } catch {
-        // Unreadable storage: err on the side of not annoying the user.
-        completed = true;
-      }
-      if (!mounted) return;
-      if (completed || sessionStarted) {
-        setVisible(false);
-        return;
-      }
-      // Prefetch TTS so playback starts instantly on tap/autoplay.
-      speechRef.current = speakText({ text: GREETING_TEXT });
-      speechRef.current.catch(() => {
-        // Handled where it's awaited — this just avoids an unhandled rejection.
-      });
-      if (Platform.OS === 'web') {
-        // Browsers block audio without a user gesture — ask for a tap.
-        setState('ready');
-      } else {
-        void start();
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    if (sessionStarted) {
+      // StrictMode remount mid-session: the greeting already ran/is running.
+      setVisible(false);
+      return;
+    }
+    // Prefetch TTS so playback starts instantly on tap/autoplay.
+    speechRef.current = speakText({ text: GREETING_TEXT });
+    speechRef.current.catch(() => {
+      // Handled where it's awaited — this just avoids an unhandled rejection.
+    });
+    if (Platform.OS === 'web') {
+      // Browsers block audio without a user gesture — ask for a tap.
+      setState('ready');
+    } else {
+      void start();
+    }
   }, [start]);
 
   if (!visible) return null;

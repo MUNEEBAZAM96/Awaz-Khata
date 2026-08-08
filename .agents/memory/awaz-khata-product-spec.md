@@ -10,6 +10,6 @@ description: Hackathon product-spec direction for the voice ledger — storage r
 
 **How to apply:** Read that spec file before changing backend storage, voice-flow wording, or the mobile voice pipeline.
 
-## First-launch greeting
-- Onboarding state (welcome-completed flag) is device-local AsyncStorage only — spec explicitly forbids backend/API/DB involvement for it.
+## Launch greeting
+- User changed the original once-per-install spec: the assistant must introduce itself on EVERY app open/refresh (no persisted completed-flag; onboarding state must never touch the backend/DB).
 - Web autoplay is blocked without a gesture: the welcome intro must offer a «تعارف سنیں» tap-to-play path on web; only native may auto-play TTS.
