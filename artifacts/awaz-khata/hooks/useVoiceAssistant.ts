@@ -49,6 +49,7 @@ export function useVoiceAssistant() {
   const queryClient = useQueryClient();
   const [state, setState] = useState<VoiceState>('idle');
   const [transcript, setTranscript] = useState<string | null>(null);
+  const [reply, setReply] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const busyRef = useRef(false);
 
@@ -56,8 +57,9 @@ export function useVoiceAssistant() {
     AudioModule.requestRecordingPermissionsAsync().catch(() => undefined);
   }, []);
 
-  /** Speak a sentence aloud; never throws, always lands back on idle. */
+  /** Show + speak a sentence aloud; never throws, always lands back on idle. */
   const speakAndFinish = useCallback(async (text: string) => {
+    setReply(text);
     try {
       const speech = await speakText({ text });
       setState('speaking');
@@ -144,6 +146,7 @@ export function useVoiceAssistant() {
         }
         setError(null);
         setTranscript(null);
+        setReply(null);
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
         await recorder.prepareToRecordAsync();
         recorder.record();
@@ -180,5 +183,5 @@ export function useVoiceAssistant() {
     }
   }, [state, recorder, process]);
 
-  return { state, transcript, error, toggle };
+  return { state, transcript, reply, error, toggle };
 }

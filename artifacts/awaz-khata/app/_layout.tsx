@@ -12,6 +12,11 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
+import {
+  NotoNastaliqUrdu_400Regular,
+  NotoNastaliqUrdu_500Medium,
+  NotoNastaliqUrdu_700Bold,
+} from '@expo-google-fonts/noto-nastaliq-urdu';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -38,6 +43,9 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    NotoNastaliqUrdu_400Regular,
+    NotoNastaliqUrdu_500Medium,
+    NotoNastaliqUrdu_700Bold,
   });
 
   useEffect(() => {

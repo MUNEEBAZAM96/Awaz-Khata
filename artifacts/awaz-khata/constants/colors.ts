@@ -43,6 +43,13 @@ const colors = {
     // Listening state
     recording: '#C03A2B',
 
+    // Soft tints (flat icon chips, halos, highlight surfaces)
+    primarySoft: 'rgba(14, 95, 73, 0.10)',
+    accentSoft: 'rgba(201, 162, 39, 0.14)',
+    successSoft: 'rgba(31, 122, 77, 0.12)',
+    destructiveSoft: 'rgba(192, 58, 43, 0.10)',
+    recordingSoft: 'rgba(192, 58, 43, 0.15)',
+
     // Borders and input outlines
     border: '#DCD3BF',
     input: '#DCD3BF',

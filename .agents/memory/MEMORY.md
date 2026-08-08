@@ -1,2 +1,3 @@
 - [api-zod barrel collision](api-zod-barrel-collision.md) — orval codegen overwrites the barrel and reintroduces a const/type name collision for multipart endpoints; re-fix with explicit exports after every codegen.
 - [Awaz Khata product spec](awaz-khata-product-spec.md) — user spec forbids adding a database; spoken save confirmations use conversational «جی، میں نے سن لیا اور …» wording built only after save.
+- [Expo web font blanking](expo-web-font-screenshots.md) — blank white web screenshots usually mean fonts are still downloading, not a crash; wait ~30 s and retry before debugging.

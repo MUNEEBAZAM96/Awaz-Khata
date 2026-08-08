@@ -18,6 +18,7 @@ import {
   type Transaction,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { fonts, urduLine } from '@/constants/typography';
 import { TransactionRow } from '@/components/TransactionRow';
 
 interface PersonBalance {
@@ -41,6 +42,12 @@ function peopleFrom(transactions: Transaction[]): PersonBalance[] {
   return [...map.values()]
     .map((e) => ({ person: e.person, balance: e.given - e.received }))
     .sort((a, b) => b.balance - a.balance);
+}
+
+function balanceDirection(balance: number): string {
+  if (balance > 0) return 'ان سے لینے ہیں';
+  if (balance < 0) return 'ان کو دینے ہیں';
+  return 'حساب برابر';
 }
 
 export default function LedgerScreen() {
@@ -67,6 +74,7 @@ export default function LedgerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* RTL header: back button sits on the right, arrow points right */}
       <View style={[styles.header, { paddingTop: insets.top + webTop + 12 }]}>
         <Pressable
           testID="back-button"
@@ -81,7 +89,7 @@ export default function LedgerScreen() {
             },
           ]}
         >
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
+          <Feather name="arrow-right" size={22} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>میرا کھاتہ</Text>
         <View style={styles.backButtonPlaceholder} />
@@ -147,27 +155,53 @@ export default function LedgerScreen() {
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
                 لوگوں کا حساب
               </Text>
-              {people.map((p) => (
-                <View
-                  key={p.person}
-                  style={[styles.personRow, { borderColor: colors.border }]}
-                >
-                  <Text
-                    style={[styles.personName, { color: colors.foreground }]}
-                    numberOfLines={1}
-                  >
-                    {p.person}
-                  </Text>
-                  <Text
+              <View
+                style={[
+                  styles.cardList,
+                  { borderColor: colors.border, backgroundColor: colors.card },
+                ]}
+              >
+                {people.map((p, index) => (
+                  <View
+                    key={p.person}
                     style={[
-                      styles.personBalance,
-                      { color: p.balance > 0 ? colors.destructive : colors.success },
+                      styles.personRow,
+                      index < people.length - 1 && {
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderColor: colors.border,
+                      },
                     ]}
                   >
-                    Rs. {Math.abs(p.balance).toLocaleString('en-PK')}
-                  </Text>
-                </View>
-              ))}
+                    <Text
+                      style={[styles.personName, { color: colors.foreground }]}
+                      numberOfLines={1}
+                    >
+                      {p.person}
+                    </Text>
+                    <View style={styles.personBalanceWrap}>
+                      <Text
+                        style={[
+                          styles.personBalance,
+                          {
+                            color:
+                              p.balance > 0 ? colors.destructive : colors.success,
+                          },
+                        ]}
+                      >
+                        Rs. {Math.abs(p.balance).toLocaleString('en-PK')}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.personDirection,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {balanceDirection(p.balance)}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
             </View>
           ) : null}
 
@@ -176,14 +210,33 @@ export default function LedgerScreen() {
               تمام لین دین
             </Text>
             {transactions.length === 0 ? (
-              <View style={styles.emptyWrap}>
+              <View
+                style={[
+                  styles.cardList,
+                  styles.emptyWrap,
+                  { borderColor: colors.border, backgroundColor: colors.card },
+                ]}
+              >
                 <Feather name="book-open" size={26} color={colors.mutedForeground} />
                 <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                   ابھی کھاتہ خالی ہے{'\n'}مائیک دبا کر پہلا اندراج کریں
                 </Text>
               </View>
             ) : (
-              transactions.map((t) => <TransactionRow key={t.id} transaction={t} />)
+              <View
+                style={[
+                  styles.cardList,
+                  { borderColor: colors.border, backgroundColor: colors.card },
+                ]}
+              >
+                {transactions.map((t, index) => (
+                  <TransactionRow
+                    key={t.id}
+                    transaction={t}
+                    showDivider={index < transactions.length - 1}
+                  />
+                ))}
+              </View>
             )}
           </View>
         </ScrollView>
@@ -197,11 +250,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   backButton: {
     width: 48,
@@ -216,8 +269,9 @@ const styles = StyleSheet.create({
     height: 48,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 22,
+    lineHeight: urduLine(22),
+    fontFamily: fonts.urduBold,
     writingDirection: 'rtl',
   },
   centerFill: {
@@ -228,70 +282,87 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   summaryGrid: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   summaryCell: {
     flexBasis: '47%',
     flexGrow: 1,
     borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
-    gap: 4,
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: urduLine(13),
+    fontFamily: fonts.urdu,
     writingDirection: 'rtl',
   },
   summaryValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: fonts.numberBold,
     fontVariant: ['tabular-nums'],
   },
   section: {
-    marginTop: 24,
+    marginTop: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    lineHeight: urduLine(16),
+    fontFamily: fonts.urduBold,
     writingDirection: 'rtl',
     textAlign: 'right',
     marginBottom: 8,
   },
+  cardList: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+  },
   personRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    paddingVertical: 14,
+    paddingVertical: 10,
     gap: 16,
-    minHeight: 56,
+    minHeight: 60,
   },
   personName: {
     flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 15,
+    lineHeight: urduLine(15),
+    fontFamily: fonts.urduMedium,
     writingDirection: 'rtl',
-    textAlign: 'left',
+    textAlign: 'right',
+  },
+  personBalanceWrap: {
+    alignItems: 'flex-start',
   },
   personBalance: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: fonts.numberBold,
     fontVariant: ['tabular-nums'],
+  },
+  personDirection: {
+    fontSize: 11,
+    lineHeight: 20,
+    fontFamily: fonts.urdu,
+    writingDirection: 'rtl',
   },
   emptyWrap: {
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 28,
+    gap: 8,
+    paddingVertical: 24,
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: 14,
+    lineHeight: urduLine(14),
+    fontFamily: fonts.urdu,
     textAlign: 'center',
-    lineHeight: 24,
     writingDirection: 'rtl',
   },
   retryButton: {
@@ -304,7 +375,8 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: 15,
-    fontWeight: '600',
+    lineHeight: urduLine(15),
+    fontFamily: fonts.urduMedium,
     writingDirection: 'rtl',
   },
 });

@@ -30,8 +30,9 @@ Voice-first personal finance assistant for Pakistani users (Uplift AI × Replit 
 - `artifacts/api-server/src/lib/finance.ts` — finance engine + ALL Urdu response templates (deterministic; LLM never calculates)
 - `artifacts/api-server/src/lib/llm.ts` — Groq/OpenAI intent extraction with strict zod validation
 - `artifacts/api-server/src/routes/` — voice.ts, transactions.ts, query.ts
-- `artifacts/awaz-khata/hooks/useVoiceAssistant.ts` — voice pipeline state machine (idle→listening→processing→speaking)
+- `artifacts/awaz-khata/hooks/useVoiceAssistant.ts` — voice pipeline state machine (idle→listening→processing→speaking); exposes `reply` (last spoken response, shown on screen by VoiceStatus)
 - `artifacts/awaz-khata/components/` — VoiceButton, VoiceStatus, ActivityList, SummaryHeader, TransactionRow
+- `artifacts/awaz-khata/constants/typography.ts` — Urdu (Noto Nastaliq Urdu) + Inter font tokens; every Urdu style needs `urduLine()` (~2× fontSize) or Nastaliq clips. RTL is done per-row with `flexDirection: 'row-reverse'` (no I18nManager forcing)
 - `artifacts/awaz-khata/lib/` — api.ts (multipart transcribe upload), audio.ts (base64 MP3 playback)
 - `README.md` — hackathon-facing setup + demo commands doc
 

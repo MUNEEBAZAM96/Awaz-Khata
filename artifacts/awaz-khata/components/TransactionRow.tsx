@@ -1,8 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
+import { fonts, urduLine } from '@/constants/typography';
 import type { Transaction } from '@workspace/api-client-react';
-import { activityLabel } from '@/components/ActivityList';
+import { activityLabel, TYPE_ICONS } from '@/components/ActivityList';
 
 const TYPE_LABELS: Record<Transaction['type'], string> = {
   expense: 'خرچ',
@@ -27,14 +29,29 @@ function formatDate(timestamp: string): string {
 
 interface Props {
   transaction: Transaction;
+  /** Hide on the last row of a card list. */
+  showDivider?: boolean;
 }
 
-export function TransactionRow({ transaction: t }: Props) {
+export function TransactionRow({ transaction: t, showDivider = true }: Props) {
   const colors = useColors();
   const isOut = t.type === 'expense' || t.type === 'given';
+  const tint = isOut ? colors.destructive : colors.success;
+  const tintSoft = isOut ? colors.destructiveSoft : colors.successSoft;
 
   return (
-    <View style={[styles.row, { borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.row,
+        {
+          borderColor: colors.border,
+          borderBottomWidth: showDivider ? StyleSheet.hairlineWidth : 0,
+        },
+      ]}
+    >
+      <View style={[styles.iconChip, { backgroundColor: tintSoft }]}>
+        <Feather name={TYPE_ICONS[t.type]} size={16} color={tint} />
+      </View>
       <View style={styles.textWrap}>
         <Text style={[styles.label, { color: colors.foreground }]} numberOfLines={1}>
           {activityLabel(t)}
@@ -43,12 +60,7 @@ export function TransactionRow({ transaction: t }: Props) {
           {TYPE_LABELS[t.type]} · {formatDate(t.timestamp)}
         </Text>
       </View>
-      <Text
-        style={[
-          styles.amount,
-          { color: isOut ? colors.destructive : colors.success },
-        ]}
-      >
+      <Text style={[styles.amount, { color: tint }]}>
         {isOut ? '-' : '+'} Rs. {t.amount.toLocaleString('en-PK')}
       </Text>
     </View>
@@ -57,32 +69,39 @@ export function TransactionRow({ transaction: t }: Props) {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 12,
-    borderBottomWidth: 1,
-    paddingVertical: 14,
-    minHeight: 60,
+    paddingVertical: 10,
+    minHeight: 64,
+  },
+  iconChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textWrap: {
     flex: 1,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    lineHeight: urduLine(15),
+    fontFamily: fonts.urduMedium,
     writingDirection: 'rtl',
-    textAlign: 'left',
+    textAlign: 'right',
   },
   meta: {
-    fontSize: 13,
-    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 22,
+    fontFamily: fonts.urdu,
     writingDirection: 'rtl',
-    textAlign: 'left',
+    textAlign: 'right',
   },
   amount: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontFamily: fonts.numberBold,
     fontVariant: ['tabular-nums'],
   },
 });

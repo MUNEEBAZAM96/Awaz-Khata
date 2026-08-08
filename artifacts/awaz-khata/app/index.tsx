@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import {
   getListTransactionsQueryKey,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { fonts, urduLine } from '@/constants/typography';
 import { useVoiceAssistant } from '@/hooks/useVoiceAssistant';
 import { VoiceButton } from '@/components/VoiceButton';
 import { VoiceStatus } from '@/components/VoiceStatus';
@@ -20,7 +21,7 @@ export default function MainVoiceScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state, transcript, error, toggle } = useVoiceAssistant();
+  const { state, transcript, reply, error, toggle } = useVoiceAssistant();
 
   const query = useListTransactions({
     query: { queryKey: getListTransactionsQueryKey() },
@@ -43,27 +44,52 @@ export default function MainVoiceScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={{ paddingTop: insets.top + webTop + 20 }}>
-        <Text style={[styles.title, { color: colors.foreground }]}>آواز کھاتہ</Text>
-        <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
-          اپنے پیسوں کا حساب، بس بول کر
-        </Text>
-      </View>
+      {/*
+       * The column scrolls ONLY when it cannot fit (small screens, long
+       * replies). On normal phones content fits, nothing scrolls, and the
+       * mic stays visually centered via flexGrow.
+       */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + webTop + 12 },
+        ]}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
+        <View>
+          <Text style={[styles.title, { color: colors.foreground }]}>آواز کھاتہ</Text>
+          <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
+            اپنے پیسوں کا حساب، بس بول کر
+          </Text>
+        </View>
 
-      <View style={styles.summaryWrap}>
-        <SummaryHeader todayExpenses={todayExpenses} />
-      </View>
+        <View style={styles.summaryWrap}>
+          <SummaryHeader todayExpenses={todayExpenses} />
+        </View>
 
-      <View style={styles.centerArea}>
-        <VoiceButton state={state} onPress={toggle} />
-        <VoiceStatus state={state} transcript={transcript} error={error} />
-      </View>
+        <View style={styles.centerArea}>
+          <VoiceButton state={state} onPress={toggle} />
+          <VoiceStatus
+            state={state}
+            transcript={transcript}
+            reply={reply}
+            error={error}
+          />
+        </View>
 
-      <View style={styles.activitySection}>
-        <ActivityList transactions={transactions} />
-      </View>
+        <View style={styles.activitySection}>
+          <ActivityList transactions={transactions} />
+        </View>
+      </ScrollView>
 
-      <View style={{ paddingBottom: insets.bottom + webBottom + 16 }}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: insets.bottom + webBottom + 16 },
+        ]}
+      >
         <Pressable
           testID="open-ledger"
           onPress={() => router.push('/ledger')}
@@ -89,35 +115,49 @@ export default function MainVoiceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
+    paddingBottom: 4,
   },
   title: {
-    fontSize: 34,
+    fontSize: 30,
+    lineHeight: urduLine(30),
+    fontFamily: fonts.urduBold,
     textAlign: 'center',
-    fontWeight: '700',
     writingDirection: 'rtl',
   },
   tagline: {
-    fontSize: 15,
+    fontSize: 13,
+    lineHeight: urduLine(13),
+    fontFamily: fonts.urdu,
     textAlign: 'center',
-    marginTop: 6,
     writingDirection: 'rtl',
+    marginTop: -4,
   },
   summaryWrap: {
-    marginTop: 20,
+    marginTop: 12,
   },
   centerArea: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
+    paddingVertical: 12,
   },
   activitySection: {
-    minHeight: 80,
-    marginBottom: 12,
+    minHeight: 72,
+  },
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 10,
   },
   ledgerButton: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
@@ -126,8 +166,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   ledgerButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 16,
+    lineHeight: urduLine(16),
+    fontFamily: fonts.urduMedium,
     writingDirection: 'rtl',
   },
 });

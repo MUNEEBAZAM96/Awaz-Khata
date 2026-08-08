@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -25,10 +25,13 @@ export function VoiceButton({ state, onPress }: Props) {
   const scale = useSharedValue(1);
 
   const isListening = state === 'listening';
-  const disabled = state === 'processing' || state === 'speaking';
+  const isSpeaking = state === 'speaking';
+  const isProcessing = state === 'processing';
+  const disabled = isProcessing || isSpeaking;
 
   useEffect(() => {
     if (isListening) {
+      // Urgent heartbeat while recording
       pulse.value = withRepeat(
         withSequence(
           withTiming(1.18, { duration: 700, easing: Easing.out(Easing.quad) }),
@@ -36,11 +39,20 @@ export function VoiceButton({ state, onPress }: Props) {
         ),
         -1,
       );
+    } else if (isSpeaking) {
+      // Gentle breathing while the assistant talks back
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(1.08, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+          withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+      );
     } else {
       cancelAnimation(pulse);
       pulse.value = withTiming(1, { duration: 200 });
     }
-  }, [isListening, pulse]);
+  }, [isListening, isSpeaking, pulse]);
 
   const haloStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
@@ -49,22 +61,27 @@ export function VoiceButton({ state, onPress }: Props) {
     transform: [{ scale: scale.value }],
   }));
 
-  const iconName =
-    state === 'listening' ? 'square' : state === 'speaking' ? 'volume-2' : 'mic';
+  const haloColor = isListening
+    ? colors.recordingSoft
+    : isSpeaking
+      ? colors.accentSoft
+      : colors.primarySoft;
+  const ringColor = isListening
+    ? colors.recording
+    : isSpeaking
+      ? colors.accent
+      : colors.border;
+  const buttonColor = isListening
+    ? colors.recording
+    : isSpeaking
+      ? colors.accent
+      : colors.primary;
+  const iconColor = isSpeaking ? colors.accentForeground : colors.primaryForeground;
 
   return (
     <Animated.View style={styles.wrap}>
-      <Animated.View
-        style={[
-          styles.halo,
-          haloStyle,
-          {
-            backgroundColor: isListening
-              ? 'rgba(192, 58, 43, 0.15)'
-              : 'rgba(14, 95, 73, 0.10)',
-          },
-        ]}
-      />
+      <Animated.View style={[styles.halo, haloStyle, { backgroundColor: haloColor }]} />
+      <View style={[styles.ring, { borderColor: ringColor }]} />
       <Animated.View style={buttonStyle}>
         <Pressable
           testID="mic-button"
@@ -77,12 +94,20 @@ export function VoiceButton({ state, onPress }: Props) {
           style={({ pressed }) => [
             styles.button,
             {
-              backgroundColor: isListening ? colors.recording : colors.primary,
-              opacity: disabled ? 0.55 : pressed ? 0.9 : 1,
+              backgroundColor: buttonColor,
+              opacity: pressed ? 0.9 : 1,
             },
           ]}
         >
-          <Feather name={iconName} size={56} color={colors.primaryForeground} />
+          {isProcessing ? (
+            <ActivityIndicator size="large" color={colors.primaryForeground} />
+          ) : (
+            <Feather
+              name={isListening ? 'square' : isSpeaking ? 'volume-2' : 'mic'}
+              size={54}
+              color={iconColor}
+            />
+          )}
         </Pressable>
       </Animated.View>
     </Animated.View>
@@ -93,23 +118,30 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 210,
-    height: 210,
+    width: 200,
+    height: 200,
   },
   halo: {
     position: 'absolute',
-    width: 210,
-    height: 210,
-    borderRadius: 105,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+  },
+  ring: {
+    position: 'absolute',
+    width: 172,
+    height: 172,
+    borderRadius: 86,
+    borderWidth: 1.5,
   },
   button: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 148,
+    height: 148,
+    borderRadius: 74,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.16,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
