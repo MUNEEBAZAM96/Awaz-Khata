@@ -1,0 +1,1554 @@
+# IMPLEMENTATION TASK — Upgrade Awaz Khata into a Natural Conversational Voice Assistant
+
+You are working on an **already functional hackathon application** called:
+
+# آواز کھاتہ — Awaz Khata
+
+### Tagline
+
+**اپنے پیسوں کا حساب، بس بول کر۔**
+
+The application is a voice-first personal finance assistant for Pakistani users.
+
+The existing application already has a working:
+
+**Expo React Native frontend → Backend → Uplift AI STT → Groq intent extraction → Finance Engine → JSON ledger → Uplift AI TTS → Expo audio playback**
+
+It also already has the existing Home/Voice Assistant, Ledger, AI Chat, and bottom-tab functionality.
+
+---
+
+# ⚠️ CRITICAL INSTRUCTION
+
+**DO NOT rebuild the application from scratch.**
+
+**DO NOT replace the existing architecture.**
+
+**DO NOT remove or break any existing features.**
+
+**DO NOT replace the existing Uplift AI integration.**
+
+**DO NOT replace Groq.**
+
+**DO NOT replace the finance engine.**
+
+**DO NOT introduce a database.**
+
+**DO NOT change the existing JSON ledger architecture.**
+
+The current application is working.
+
+Your task is to **upgrade the existing voice interaction so that Awaz Khata feels like a natural Urdu-speaking financial assistant rather than a simple voice transaction recorder.**
+
+Before modifying anything:
+
+1. Inspect the entire existing project.
+2. Identify the current voice pipeline.
+3. Identify the existing STT implementation.
+4. Identify the existing Groq intent extraction.
+5. Identify the existing finance engine.
+6. Identify the existing TTS implementation.
+7. Identify the existing audio utilities.
+8. Identify the current Home/Voice screen.
+9. Identify the existing API contracts.
+10. Reuse existing utilities and functions wherever possible.
+
+Only then implement the feature.
+
+---
+
+# 🎯 CORE OBJECTIVE
+
+Currently the experience is approximately:
+
+```text
+USER SPEAKS
+     ↓
+STT
+     ↓
+GROQ
+     ↓
+FINANCE ACTION
+     ↓
+TTS
+     ↓
+USER HEARS RESULT
+```
+
+Upgrade it into:
+
+```text
+USER SPEAKS
+     ↓
+Uplift AI STT
+     ↓
+TRANSCRIPTION
+     ↓
+GROQ INTENT UNDERSTANDING
+     ↓
+FINANCE ENGINE
+     ↓
+CONTEXT-AWARE URDU RESPONSE
+     ↓
+Uplift AI TTS
+     ↓
+USER HEARS NATURAL RESPONSE
+```
+
+The assistant should feel like it **heard the user, understood the user, performed the action, and is now responding naturally.**
+
+---
+
+# 🎙️ TARGET USER EXPERIENCE
+
+The target experience is:
+
+### Example 1 — Giving money
+
+User:
+
+> "میں نے علی کو دو ہزار روپے دیے"
+
+App should respond naturally:
+
+> **"جی، میں نے سن لیا۔ علی کے کھاتے میں دو ہزار روپے ڈال دیے ہیں۔"**
+
+The important part is:
+
+```text
+جی، میں نے سن لیا۔
++
+علی کے کھاتے میں دو ہزار روپے ڈال دیے ہیں۔
+```
+
+---
+
+### Example 2 — Asking about a person
+
+User:
+
+> "علی کے کتنے باقی ہیں؟"
+
+App:
+
+> **"جی، میں علی کا حساب چیک کرتا ہوں۔ علی کے تین ہزار روپے باقی ہیں۔"**
+
+The response should contain:
+
+```text
+contextual acknowledgement
++
+actual finance-engine result
+```
+
+---
+
+### Example 3 — Expense
+
+User:
+
+> "آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے"
+
+App:
+
+> **"جی، میں نے سن لیا۔ آٹھ سو روپے پٹرول کے خرچے میں شامل کر دیے ہیں۔"**
+
+---
+
+### Example 4 — Income
+
+User:
+
+> "آج مجھے پانچ ہزار روپے ملے"
+
+App:
+
+> **"جی، میں نے سن لیا۔ پانچ ہزار روپے آمدن میں شامل کر دیے ہیں۔"**
+
+---
+
+### Example 5 — Money received back
+
+User:
+
+> "علی نے پانچ سو روپے واپس کیے"
+
+App:
+
+> **"جی، میں نے سن لیا۔ علی سے پانچ سو روپے واپس ملنے کا حساب محفوظ کر لیا ہے۔"**
+
+---
+
+### Example 6 — Daily expense query
+
+User:
+
+> "میں نے آج کتنے پیسے خرچ کیے؟"
+
+App:
+
+> **"جی، میں نے آج کا حساب چیک کیا ہے۔ آپ نے آج دو ہزار آٹھ سو روپے خرچ کیے ہیں۔"**
+
+---
+
+# 🧠 IMPORTANT ARCHITECTURE RULE
+
+The LLM must **NOT calculate financial numbers**.
+
+Groq is responsible only for:
+
+```text
+UNDERSTANDING USER INTENT
+```
+
+The finance engine is responsible for:
+
+```text
+ALL FINANCIAL CALCULATIONS
+```
+
+The response generator is responsible for:
+
+```text
+TURNING VERIFIED FINANCE RESULTS
+INTO NATURAL URDU
+```
+
+Uplift AI is responsible for:
+
+```text
+VOICE INPUT + VOICE OUTPUT
+```
+
+Therefore:
+
+```text
+Uplift AI
+   ↓
+Speech Recognition
+
+Groq
+   ↓
+Intent Understanding
+
+Finance Engine
+   ↓
+Truth / Mathematics
+
+Response Generator
+   ↓
+Natural Urdu
+
+Uplift AI
+   ↓
+Speech Output
+```
+
+Do not violate this architecture.
+
+---
+
+# 1. CREATE A DEDICATED RESPONSE GENERATOR
+
+Inspect the existing backend architecture.
+
+If a response-generation service already exists, enhance it instead of creating a duplicate.
+
+Otherwise create something similar to:
+
+```text
+backend/services/responseGenerator.ts
+```
+
+or:
+
+```text
+backend/src/services/responseGenerator.ts
+```
+
+depending on the existing project structure.
+
+The service should convert verified finance results into short, natural Urdu responses.
+
+---
+
+# 2. RESPONSE GENERATOR REQUIREMENTS
+
+The response generator must support:
+
+```text
+expense
+income
+given
+received
+person_balance
+total_expenses
+total_income
+today_summary
+monthly_summary
+category_summary
+recent_transactions
+```
+
+Use the actual result returned by the finance engine.
+
+Never invent numbers.
+
+Never calculate numbers inside the response generator.
+
+---
+
+# 3. TRANSACTION RESPONSE STYLE
+
+For transactions, use:
+
+```text
+ACKNOWLEDGEMENT + RESULT
+```
+
+Examples:
+
+### Expense
+
+```text
+جی، میں نے سن لیا۔ 800 روپے کا خرچہ محفوظ کر لیا ہے۔
+```
+
+If category exists:
+
+```text
+جی، میں نے سن لیا۔ 800 روپے پٹرول کے خرچے میں شامل کر دیے ہیں۔
+```
+
+### Income
+
+```text
+جی، میں نے سن لیا۔ 5,000 روپے آمدن میں شامل کر دیے ہیں۔
+```
+
+### Given
+
+```text
+جی، میں نے سن لیا۔ علی کے کھاتے میں 2,000 روپے ڈال دیے ہیں۔
+```
+
+### Received
+
+```text
+جی، میں نے سن لیا۔ علی سے 500 روپے واپس ملنے کا حساب محفوظ کر لیا ہے۔
+```
+
+---
+
+# 4. QUERY RESPONSE STYLE
+
+Queries should sound like the assistant is actively checking the user's finances.
+
+Do NOT simply say:
+
+```text
+علی کے 3000 روپے باقی ہیں۔
+```
+
+Prefer:
+
+```text
+جی، میں علی کا حساب چیک کرتا ہوں۔ علی کے 3,000 روپے باقی ہیں۔
+```
+
+For today's spending:
+
+```text
+جی، میں نے آج کا حساب چیک کیا ہے۔ آپ نے آج 2,800 روپے خرچ کیے ہیں۔
+```
+
+For monthly spending:
+
+```text
+جی، میں نے اس مہینے کا حساب چیک کیا ہے۔ آپ نے اس مہینے 24,500 روپے خرچ کیے ہیں۔
+```
+
+For category spending:
+
+```text
+جی، میں کھانے کا حساب دیکھتا ہوں۔ آپ نے اس مہینے کھانے پر 8,200 روپے خرچ کیے ہیں۔
+```
+
+---
+
+# 5. NATURAL ACKNOWLEDGEMENT PHRASES
+
+Create a small controlled set of Urdu acknowledgement phrases.
+
+Examples:
+
+```text
+جی، میں نے سن لیا۔
+جی، سمجھ گیا۔
+ٹھیک ہے، میں نے سن لیا۔
+جی، یہ حساب نوٹ کر لیا۔
+ٹھیک ہے، یہ حساب محفوظ کر لیا۔
+جی، کھاتے میں ڈال دیا ہے۔
+```
+
+For queries:
+
+```text
+جی، میں حساب چیک کرتا ہوں۔
+جی، میں آپ کا حساب دیکھتا ہوں۔
+جی، میں نے حساب چیک کیا ہے۔
+جی، میں اس کا حساب دیکھتا ہوں۔
+```
+
+For person-specific queries:
+
+```text
+جی، میں علی کا حساب چیک کرتا ہوں۔
+جی، علی کا حساب دیکھتا ہوں۔
+```
+
+Do not overuse random phrases.
+
+For a hackathon demo, prioritize predictable, natural responses.
+
+---
+
+# 6. DO NOT RANDOMLY CALL GROQ FOR RESPONSE GENERATION
+
+Do NOT make another Groq request simply to generate:
+
+```text
+"جی، میں نے سن لیا..."
+```
+
+This is unnecessary.
+
+Use deterministic templates.
+
+Why:
+
+* faster response
+* lower latency
+* lower token usage
+* no hallucinations
+* guaranteed correct numbers
+* more reliable live demo
+
+Groq should remain responsible for intent extraction and AI financial chat where appropriate.
+
+---
+
+# 7. IMPROVE THE VOICE STATE UX
+
+The existing voice state system should remain.
+
+If it currently uses:
+
+```ts
+type VoiceState =
+  | "idle"
+  | "listening"
+  | "processing"
+  | "speaking";
+```
+
+keep it.
+
+Enhance the visible labels.
+
+---
+
+## IDLE
+
+Display:
+
+```text
+بولنے کے لیے دبائیں
+```
+
+Optional secondary text:
+
+```text
+اپنے پیسوں کے بارے میں بتائیں یا پوچھیں
+```
+
+---
+
+## LISTENING
+
+Display:
+
+```text
+سن رہا ہوں...
+```
+
+Secondary:
+
+```text
+آپ بول سکتے ہیں
+```
+
+The microphone button should visually indicate active recording.
+
+---
+
+## PROCESSING
+
+Display:
+
+```text
+آپ کی بات سمجھ رہا ہوں...
+```
+
+Do NOT display a generic:
+
+```text
+Loading...
+```
+
+The user should feel that the assistant is processing their speech.
+
+---
+
+## SPEAKING
+
+Display:
+
+```text
+آپ کو جواب دے رہا ہوں...
+```
+
+Optionally show:
+
+```text
+🔊
+```
+
+The user should clearly understand that the app is speaking.
+
+---
+
+# 8. SHOW WHAT THE USER SAID
+
+After successful STT, display the transcription on the Home screen.
+
+Example:
+
+```text
+آپ نے کہا
+
+"میں نے علی کو دو ہزار روپے دیے"
+```
+
+Then:
+
+```text
+سمجھ رہا ہوں...
+```
+
+After processing:
+
+```text
+آواز کھاتہ
+
+"جی، میں نے سن لیا۔ علی کے کھاتے میں
+دو ہزار روپے ڈال دیے ہیں۔"
+```
+
+This is extremely important for the hackathon demo because judges can visually see:
+
+```text
+VOICE
+ ↓
+TEXT
+ ↓
+UNDERSTANDING
+ ↓
+ACTION
+ ↓
+VOICE RESPONSE
+```
+
+---
+
+# 9. ADD A SMALL CONVERSATION HISTORY TO HOME
+
+Do not build persistent chat history.
+
+Do not add a database.
+
+Keep the latest few interactions in frontend memory only.
+
+Use a structure similar to:
+
+```ts
+interface VoiceInteraction {
+  id: string;
+  userText: string;
+  assistantText: string;
+  timestamp: string;
+}
+```
+
+Keep approximately the last 3–5 interactions.
+
+Example:
+
+```text
+آپ
+
+میں نے علی کو دو ہزار روپے دیے۔
+
+آواز کھاتہ
+
+جی، میں نے سن لیا۔ علی کے کھاتے میں
+دو ہزار روپے ڈال دیے ہیں۔
+```
+
+Then:
+
+```text
+آپ
+
+علی کے کتنے باقی ہیں؟
+
+آواز کھاتہ
+
+جی، میں علی کا حساب چیک کرتا ہوں۔
+علی کے تین ہزار روپے باقی ہیں۔
+```
+
+This should visually communicate that the user is having a conversation with the app.
+
+---
+
+# 10. IMPORTANT — DO NOT CHANGE THE FINANCE PIPELINE
+
+The existing pipeline must continue to work.
+
+Do not change:
+
+```text
+Uplift STT
+Groq extraction
+Finance engine
+JSON storage
+Existing transaction APIs
+Existing query APIs
+Uplift TTS
+```
+
+unless a minimal change is absolutely necessary.
+
+The enhancement should sit around the existing pipeline.
+
+---
+
+# 11. TRANSACTION FLOW
+
+The new transaction flow should be:
+
+```text
+USER SPEAKS
+      ↓
+Start Recording
+      ↓
+Stop Recording
+      ↓
+Uplift STT
+      ↓
+Display transcription
+      ↓
+Groq intent extraction
+      ↓
+Validate intent
+      ↓
+Finance Engine
+      ↓
+SAVE TRANSACTION
+      ↓
+Generate Urdu acknowledgement
+      ↓
+Uplift TTS
+      ↓
+Play response
+      ↓
+Add interaction to local UI history
+      ↓
+Return to idle
+```
+
+Example:
+
+```text
+"میں نے علی کو دو ہزار روپے دیے"
+```
+
+↓
+
+```json
+{
+  "mode": "transaction",
+  "type": "given",
+  "amount": 2000,
+  "person": "علی"
+}
+```
+
+↓
+
+Finance Engine saves transaction.
+
+↓
+
+Response Generator:
+
+```text
+جی، میں نے سن لیا۔ علی کے کھاتے میں دو ہزار روپے ڈال دیے ہیں۔
+```
+
+↓
+
+Uplift TTS.
+
+↓
+
+User hears response.
+
+---
+
+# 12. QUERY FLOW
+
+For:
+
+```text
+"علی کے کتنے باقی ہیں؟"
+```
+
+Flow:
+
+```text
+USER SPEAKS
+      ↓
+Uplift STT
+      ↓
+Groq
+      ↓
+person_balance
+      ↓
+Finance Engine
+      ↓
+given - received
+      ↓
+verified balance
+      ↓
+Response Generator
+      ↓
+Uplift TTS
+```
+
+Example:
+
+```text
+given = 5000
+received = 2000
+balance = 3000
+```
+
+Response:
+
+```text
+جی، میں علی کا حساب چیک کرتا ہوں۔
+علی کے تین ہزار روپے باقی ہیں۔
+```
+
+---
+
+# 13. NUMBERS MUST BE CORRECT
+
+The finance engine remains the only source of truth.
+
+If the finance engine returns:
+
+```json
+{
+  "balance": 3000
+}
+```
+
+the response must say:
+
+```text
+تین ہزار روپے
+```
+
+or:
+
+```text
+3,000 روپے
+```
+
+but NEVER:
+
+```text
+2,000 روپے
+```
+
+Do not allow the LLM to modify financial values.
+
+---
+
+# 14. IMPROVE URDU NUMBER PRESENTATION
+
+Where practical, make spoken responses natural for Urdu.
+
+For example:
+
+```text
+800
+```
+
+can become:
+
+```text
+آٹھ سو
+```
+
+```text
+2000
+```
+
+can become:
+
+```text
+دو ہزار
+```
+
+```text
+2500
+```
+
+can become:
+
+```text
+دو ہزار پانچ سو
+```
+
+However, do NOT introduce a fragile dependency or a complex NLP library solely for this.
+
+If a reliable existing number-to-Urdu utility exists, reuse it.
+
+Otherwise use numeric formatting:
+
+```text
+2,000 روپے
+```
+
+The most important requirement is correctness and TTS clarity.
+
+---
+
+# 15. TTS REQUIREMENTS
+
+Continue using the existing Uplift AI TTS implementation.
+
+Do NOT expose:
+
+```text
+UPLIFTAI_API_KEY
+```
+
+to the frontend.
+
+The frontend must continue calling the backend.
+
+The backend should receive:
+
+```json
+{
+  "text": "جی، میں نے سن لیا۔ علی کے کھاتے میں دو ہزار روپے ڈال دیے ہیں۔"
+}
+```
+
+and use Uplift AI to produce the audio.
+
+Reuse the existing:
+
+```text
+voice ID
+audio format
+audio playback utility
+```
+
+Do not replace working audio code unnecessarily.
+
+---
+
+# 16. TTS PLAYBACK STATE
+
+When audio starts:
+
+```text
+voiceState = "speaking"
+```
+
+When audio finishes:
+
+```text
+voiceState = "idle"
+```
+
+The app must NEVER remain permanently stuck in:
+
+```text
+speaking
+```
+
+If playback fails:
+
+```text
+voiceState = "idle"
+```
+
+and show the text response anyway.
+
+The financial transaction should already be saved before TTS begins.
+
+---
+
+# 17. ERROR HANDLING
+
+Every step must recover gracefully.
+
+### Microphone permission denied
+
+Display:
+
+```text
+مائیکروفون کی اجازت درکار ہے۔
+```
+
+---
+
+### STT failure
+
+Display/speak:
+
+```text
+معاف کیجیے، میں آپ کی آواز سمجھ نہیں سکا۔ دوبارہ بولیں۔
+```
+
+---
+
+### Groq failure
+
+Display/speak:
+
+```text
+معاف کیجیے، میں آپ کی بات سمجھنے میں مسئلہ ہو رہا ہے۔ دوبارہ کوشش کریں۔
+```
+
+---
+
+### Invalid intent
+
+Display:
+
+```text
+میں آپ کی بات پوری طرح سمجھ نہیں سکا۔ دوبارہ بولیں۔
+```
+
+---
+
+### Finance operation failure
+
+Display:
+
+```text
+معاف کیجیے، یہ حساب محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔
+```
+
+---
+
+### TTS failure
+
+IMPORTANT:
+
+If the transaction was successfully saved but TTS fails:
+
+DO NOT undo the transaction.
+
+Show the response text on screen:
+
+```text
+حساب محفوظ ہوگیا۔
+
+جی، میں نے سن لیا۔ علی کے کھاتے میں
+دو ہزار روپے ڈال دیے ہیں۔
+```
+
+Then return to:
+
+```text
+idle
+```
+
+---
+
+# 18. PREVENT DUPLICATE TRANSACTIONS
+
+The user should not accidentally create duplicate transactions if:
+
+* TTS fails
+* audio playback fails
+* frontend retries
+* network response is delayed
+
+Ensure the transaction is saved exactly once per successful voice action.
+
+Do not blindly retry POST transaction requests.
+
+If the existing backend already has protection, preserve it.
+
+---
+
+# 19. PREVENT MULTIPLE RECORDINGS
+
+While:
+
+```text
+processing
+```
+
+or:
+
+```text
+speaking
+```
+
+the microphone should not start another recording.
+
+The primary microphone action should be enabled only when appropriate.
+
+If the user taps during processing:
+
+```text
+ignore the tap
+```
+
+rather than starting another request.
+
+---
+
+# 20. DO NOT CREATE ARTIFICIAL LONG DELAYS
+
+Do not add:
+
+```js
+setTimeout(..., 3000)
+```
+
+just to make the assistant feel conversational.
+
+Use the real processing time.
+
+The experience should be:
+
+```text
+سن رہا ہوں...
+      ↓
+سمجھ رہا ہوں...
+      ↓
+جواب دے رہا ہوں...
+```
+
+without unnecessary waiting.
+
+---
+
+# 21. UI IMPROVEMENT
+
+Make the Home screen visually communicate the conversation.
+
+Suggested structure:
+
+```text
+┌──────────────────────────────────┐
+│                                  │
+│          آواز کھاتہ              │
+│                                  │
+│     اپنے پیسوں کا حساب           │
+│          بس بول کر               │
+│                                  │
+│                                  │
+│       ┌──────────────┐           │
+│       │              │           │
+│       │      🎙️      │           │
+│       │              │           │
+│       └──────────────┘           │
+│                                  │
+│       سن رہا ہوں...              │
+│                                  │
+│ ─────────────────────────────── │
+│                                  │
+│ آپ نے کہا                        │
+│ "میں نے علی کو دو ہزار روپے دیے" │
+│                                  │
+│ آواز کھاتہ                       │
+│ "جی، میں نے سن لیا۔ علی کے       │
+│  کھاتے میں دو ہزار روپے ڈال      │
+│  دیے ہیں۔"                       │
+│                                  │
+│                                  │
+│       最近 activity              │
+│                                  │
+└──────────────────────────────────┘
+```
+
+Keep the existing visual identity.
+
+Do not redesign the entire application.
+
+The microphone should remain the primary visual focus.
+
+---
+
+# 22. KEEP RTL SUPPORT
+
+All Urdu response text must support RTL.
+
+Use appropriate:
+
+```text
+text-right
+```
+
+and RTL layout behavior.
+
+Do not break English text or numbers.
+
+Person names and amounts should remain readable.
+
+---
+
+# 23. DO NOT OVER-ANIMATE
+
+Use subtle animations only if already present.
+
+A simple microphone pulse while listening is acceptable.
+
+For example:
+
+```text
+idle
+  ↓
+mic normal
+
+listening
+  ↓
+mic gently pulses
+
+processing
+  ↓
+subtle processing indicator
+
+speaking
+  ↓
+subtle audio/speaking indicator
+```
+
+Do not add heavy animations that could hurt performance on a hackathon demo device.
+
+---
+
+# 24. API CONTRACT
+
+First inspect the existing API.
+
+Do not create duplicate endpoints if existing endpoints already support the functionality.
+
+Prefer:
+
+```text
+existing transcribe endpoint
+existing extract endpoint
+existing transaction endpoint
+existing query endpoint
+existing speak endpoint
+```
+
+Only modify API responses if necessary.
+
+If you modify an API response, preserve backwards compatibility where possible.
+
+For example, a useful voice response could contain:
+
+```json
+{
+  "text": "جی، میں نے سن لیا۔ علی کے کھاتے میں دو ہزار روپے ڈال دیے ہیں۔",
+  "audio": "BASE64_AUDIO",
+  "contentType": "audio/mpeg"
+}
+```
+
+But do not break existing frontend callers.
+
+---
+
+# 25. FRONTEND STATE
+
+Inspect the existing voice hook.
+
+If the project already has:
+
+```text
+useVoiceAssistant()
+```
+
+enhance it instead of creating another competing voice hook.
+
+The hook should expose enough state for:
+
+```text
+voiceState
+transcript
+assistantText
+startRecording()
+stopRecording()
+error
+```
+
+Do not duplicate audio state across multiple components.
+
+There should be one source of truth for the active voice interaction.
+
+---
+
+# 26. LOCAL CONVERSATION MEMORY
+
+Do not add database persistence.
+
+Use React state only.
+
+Keep:
+
+```text
+last 3–5 voice interactions
+```
+
+This is enough.
+
+When the app is closed, the conversation can disappear.
+
+That is expected.
+
+---
+
+# 27. DEMO SCENARIO MUST WORK
+
+After implementation, test this exact sequence using the existing ledger data.
+
+### Test 1
+
+Say:
+
+> "میں نے علی کو دو ہزار روپے دیے"
+
+Expected:
+
+1. UI says:
+
+```text
+سن رہا ہوں...
+```
+
+2. UI says:
+
+```text
+آپ کی بات سمجھ رہا ہوں...
+```
+
+3. Transcription appears.
+
+4. Transaction is saved.
+
+5. UI says:
+
+```text
+آپ کو جواب دے رہا ہوں...
+```
+
+6. Uplift TTS speaks:
+
+> "جی، میں نے سن لیا۔ علی کے کھاتے میں دو ہزار روپے ڈال دیے ہیں۔"
+
+7. State returns to:
+
+```text
+idle
+```
+
+---
+
+### Test 2
+
+Say:
+
+> "علی کے کتنے باقی ہیں؟"
+
+Expected voice:
+
+> "جی، میں علی کا حساب چیک کرتا ہوں۔ علی کے تین ہزار روپے باقی ہیں۔"
+
+Use the REAL finance-engine result.
+
+---
+
+### Test 3
+
+Say:
+
+> "آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے"
+
+Expected:
+
+> "جی، میں نے سن لیا۔ آٹھ سو روپے پٹرول کے خرچے میں شامل کر دیے ہیں۔"
+
+---
+
+### Test 4
+
+Say:
+
+> "میں نے آج کتنے پیسے خرچ کیے؟"
+
+Expected:
+
+```text
+Finance Engine
+      ↓
+actual today's expense total
+      ↓
+Urdu response
+      ↓
+Uplift TTS
+```
+
+---
+
+# 28. VERIFY EXISTING FEATURES
+
+After implementation verify that these still work:
+
+* Home tab
+* Voice recording
+* Uplift STT
+* Urdu transcription
+* Groq intent extraction
+* Expense creation
+* Income creation
+* Given transaction
+* Received transaction
+* Person balance
+* Financial queries
+* JSON ledger
+* Ledger screen
+* AI Chat
+* TTS
+* Audio playback
+* Bottom tab navigation
+* RTL UI
+
+Do not mark the task complete if any existing feature is broken.
+
+---
+
+# 29. TEST WEB + EXPO
+
+The application must remain compatible with:
+
+* Expo Go
+* phone-sized screens
+* web preview where the existing project supports it
+
+Do not introduce native dependencies that require unnecessary native rebuilding unless the project already uses them.
+
+---
+
+# 30. CODE QUALITY
+
+Keep the implementation simple.
+
+Prefer:
+
+```text
+existing architecture
++
+small response generator
++
+small voice-state enhancement
++
+small conversation-history state
+```
+
+Avoid:
+
+* unnecessary abstractions
+* new state-management libraries
+* new databases
+* new AI providers
+* unnecessary packages
+* duplicated API services
+* duplicated audio utilities
+
+---
+
+# 31. FINAL EXPECTED EXPERIENCE
+
+After this implementation, Awaz Khata should no longer feel like:
+
+> "Press button → record expense → get result."
+
+It should feel like:
+
+> **"I am talking to an assistant that listens to me and manages my financial memory."**
+
+The experience should be:
+
+```text
+USER
+
+"میں نے علی کو دو ہزار روپے دیے"
+
+        ↓
+
+🎙️ Listening
+
+        ↓
+
+"آپ نے کہا:
+میں نے علی کو دو ہزار روپے دیے"
+
+        ↓
+
+🧠 Processing
+
+        ↓
+
+Finance Engine
+
+        ↓
+
+🔊 Speaking
+
+"جی، میں نے سن لیا۔
+علی کے کھاتے میں دو ہزار روپے ڈال دیے ہیں۔"
+
+        ↓
+
+USER
+
+"علی کے کتنے باقی ہیں؟"
+
+        ↓
+
+🎙️ Listening
+
+        ↓
+
+Finance Engine
+
+        ↓
+
+🔊 Speaking
+
+"جی، میں علی کا حساب چیک کرتا ہوں۔
+علی کے تین ہزار روپے باقی ہیں۔"
+```
+
+This should feel natural, fast, and reliable.
+
+---
+
+# 32. DEFINITION OF DONE
+
+This feature is complete only when:
+
+### Voice
+
+* [ ] User can speak normally.
+* [ ] Uplift STT continues working.
+* [ ] Existing Groq extraction continues working.
+* [ ] Existing finance engine remains the source of truth.
+* [ ] Existing JSON storage remains unchanged.
+* [ ] Existing Uplift TTS continues working.
+
+### Conversation
+
+* [ ] Transaction responses include natural Urdu acknowledgement.
+* [ ] Query responses include contextual checking language.
+* [ ] Responses are short and natural.
+* [ ] Responses use actual finance-engine values.
+* [ ] No LLM-generated financial calculations are introduced.
+* [ ] User transcription is visible.
+* [ ] Assistant response is visible.
+* [ ] Latest 3–5 interactions can be viewed during the session.
+
+### UX
+
+* [ ] Listening state is obvious.
+* [ ] Processing state is obvious.
+* [ ] Speaking state is obvious.
+* [ ] Microphone cannot be accidentally triggered during processing/speaking.
+* [ ] Errors return the user to idle.
+* [ ] TTS failure does not undo saved transactions.
+* [ ] No duplicate transactions are created.
+* [ ] RTL Urdu remains correct.
+
+### Demo
+
+These must work reliably:
+
+```text
+"میں نے علی کو دو ہزار روپے دیے"
+
+"علی کے کتنے باقی ہیں؟"
+
+"آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے"
+
+"میں نے آج کتنے پیسے خرچ کیے؟"
+
+"علی نے پانچ سو روپے واپس کیے"
+```
+
+---
+
+# FINAL PRIORITY
+
+Implement this feature with the following priority:
+
+**1. Do not break the existing application**
+
+**2. Preserve the existing Uplift AI voice pipeline**
+
+**3. Make the assistant sound conversational**
+
+**4. Keep financial calculations deterministic**
+
+**5. Make the voice state visually obvious**
+
+**6. Show transcription and assistant response**
+
+**7. Add lightweight session conversation history**
+
+**8. Keep latency low**
+
+**9. Keep the implementation simple**
+
+**10. Do not add unnecessary features**
+
+The final product should make a judge immediately understand:
+
+> **"I can simply talk to Awaz Khata in Urdu, it understands what I said, updates my financial ledger, and talks back to me naturally."**
+
+That conversational voice experience is the primary goal of this implementation.
