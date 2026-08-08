@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# runtime ledger data (Awaz Khata)
+artifacts/api-server/data/
