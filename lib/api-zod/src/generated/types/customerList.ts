@@ -5,7 +5,8 @@
  * Awaz Khata API - voice-first Urdu ledger
  * OpenAPI spec version: 0.1.0
  */
+import type { CustomerSummary } from './customerSummary';
 
-export interface HealthStatus {
-  status: string;
+export interface CustomerList {
+  customers: CustomerSummary[];
 }

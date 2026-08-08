@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Awaz Khata API - voice-first Urdu ledger
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: voice
+    description: Speech-to-text, extraction, and text-to-speech
+  - name: ledger
+    description: Customer credit ledger operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,162 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /transcribe:
+    post:
+      operationId: transcribeAudio
+      tags: [voice]
+      summary: Transcribe an Urdu audio recording
+      description: Accepts a multipart audio upload (field name "audio") and returns the transcribed Urdu text.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+              required: [audio]
+      responses:
+        "200":
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionResult"
+        "400":
+          description: Missing or invalid audio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: Speech-to-text provider failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /extract:
+    post:
+      operationId: extractIntent
+      tags: [voice]
+      summary: Extract a transaction or query intent from transcribed text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtractRequest"
+      responses:
+        "200":
+          description: Parsed intent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtractResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: LLM provider failure or unparseable response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /transactions:
+    post:
+      operationId: createTransaction
+      tags: [ledger]
+      summary: Save a new transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Saved transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    get:
+      operationId: listCustomers
+      tags: [ledger]
+      summary: List all customers with running balances and history
+      responses:
+        "200":
+          description: All customers with balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerList"
+  /transactions/{customer}:
+    get:
+      operationId: getCustomerLedger
+      tags: [ledger]
+      summary: Get balance and history for one customer (case-insensitive)
+      parameters:
+        - name: customer
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer ledger
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerLedger"
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /speak:
+    post:
+      operationId: speakText
+      tags: [voice]
+      summary: Convert Urdu text to speech
+      description: Returns MP3 audio as a base64 string.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakRequest"
+      responses:
+        "200":
+          description: Synthesized audio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: Text-to-speech provider failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +193,140 @@ components:
           type: string
       required:
         - status
-
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    TranscriptionResult:
+      type: object
+      properties:
+        text:
+          type: string
+      required:
+        - text
+    ExtractRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+      required:
+        - text
+    ExtractResult:
+      type: object
+      description: Either a transaction to record (mode=transaction) or a balance query (mode=query).
+      properties:
+        mode:
+          type: string
+          enum: [transaction, query]
+        customer:
+          type: string
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [credit, payment]
+        item:
+          type: [string, "null"]
+      required:
+        - mode
+        - customer
+    TransactionInput:
+      type: object
+      properties:
+        customer:
+          type: string
+          minLength: 1
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [credit, payment]
+        item:
+          type: [string, "null"]
+      required:
+        - customer
+        - amount
+        - type
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        customer:
+          type: string
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [credit, payment]
+        item:
+          type: [string, "null"]
+        timestamp:
+          type: string
+      required:
+        - id
+        - customer
+        - amount
+        - type
+        - timestamp
+    CustomerSummary:
+      type: object
+      properties:
+        customer:
+          type: string
+        balance:
+          type: number
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+      required:
+        - customer
+        - balance
+        - transactions
+    CustomerList:
+      type: object
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerSummary"
+      required:
+        - customers
+    CustomerLedger:
+      type: object
+      properties:
+        customer:
+          type: string
+        balance:
+          type: number
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+      required:
+        - customer
+        - balance
+        - transactions
+    SpeakRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+      required:
+        - text
+    SpeakResult:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+        mimeType:
+          type: string
+      required:
+        - audioBase64
+        - mimeType
