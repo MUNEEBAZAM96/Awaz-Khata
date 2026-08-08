@@ -1,0 +1,1602 @@
+# BUILD FROM SCRATCH — آواز کھاتہ (Awaz Khata)
+
+Build a complete hackathon-ready application from scratch called:
+
+# آواز کھاتہ — Awaz Khata
+
+### Tagline
+
+**اپنے پیسوں کا حساب، بس بول کر۔**
+
+English:
+**Your personal finances, just by speaking.**
+
+This is a **voice-first personal finance assistant designed for Pakistani users**.
+
+The entire primary interaction should happen through **voice**.
+
+The user should be able to speak naturally in:
+
+* Urdu
+* Roman Urdu
+* English
+* Urdu + English mixed speech
+
+The app should understand what the user said, record the financial information, calculate financial summaries, and answer questions back using **Urdu voice**.
+
+This application is being built specifically for the:
+
+**Uplift AI × Replit Voice AI Hackathon**
+
+The most important goal is:
+
+> **SPEAK → UNDERSTAND → SAVE/CALCULATE → SPEAK BACK**
+
+Do NOT build a generic expense tracker.
+
+Do NOT build a complicated banking application.
+
+Do NOT over-engineer the product.
+
+Build a small, extremely reliable voice-first MVP that works beautifully during a live hackathon demonstration.
+
+---
+
+# 1. TECHNOLOGY STACK
+
+## Frontend
+
+Use:
+
+* React Native
+* Expo
+* Expo Router
+* TypeScript
+* NativeWind
+* Axios
+* Expo audio recording/playback APIs compatible with the installed Expo SDK
+
+The frontend must be a proper Expo Router application.
+
+Do NOT use another navigation library.
+
+---
+
+# 2. VOICE + AI STACK
+
+Use **Uplift AI** as the core voice platform.
+
+Use the official Uplift AI SDK available for the project.
+
+Use Uplift AI for:
+
+### Speech-to-Text
+
+User speaks Urdu/Roman Urdu.
+
+Audio → Uplift AI → text
+
+### Text-to-Speech
+
+Financial response → Uplift AI → Urdu audio
+
+Use Uplift AI's available voice capabilities and choose/configure a clear, natural Urdu voice.
+
+Keep Uplift integration inside the backend.
+
+The React Native frontend must NEVER contain the Uplift API key.
+
+---
+
+# 3. LLM
+
+Use **Groq** as the LLM provider.
+
+Use Groq's fast inference to understand the transcription and convert natural language into structured financial intents.
+
+The LLM should NOT perform actual financial calculations.
+
+The LLM only determines:
+
+> What did the user mean?
+
+The backend finance engine determines:
+
+> What is actually in the user's financial data?
+
+This separation is extremely important.
+
+---
+
+# 4. BACKEND
+
+Use:
+
+* Node.js
+* Express
+* TypeScript or clean JavaScript
+* Uplift AI SDK
+* Groq SDK/API
+* multer
+* dotenv
+* cors
+* uuid
+
+Do not add unnecessary frameworks.
+
+Do not use:
+
+* MongoDB
+* Firebase
+* Supabase
+* PostgreSQL
+* Redis
+* Prisma
+
+For this hackathon MVP, use a simple local JSON file.
+
+---
+
+# 5. PROJECT STRUCTURE
+
+Create everything from scratch:
+
+```text
+awaz-khata/
+│
+├── frontend/
+│   ├── app/
+│   │   ├── _layout.tsx
+│   │   ├── index.tsx
+│   │   └── ledger.tsx
+│   │
+│   ├── components/
+│   │   ├── VoiceButton.tsx
+│   │   ├── VoiceStatus.tsx
+│   │   ├── ActivityList.tsx
+│   │   ├── SummaryHeader.tsx
+│   │   └── TransactionRow.tsx
+│   │
+│   ├── services/
+│   │   ├── api.ts
+│   │   └── audio.ts
+│   │
+│   ├── hooks/
+│   │   └── useVoiceAssistant.ts
+│   │
+│   ├── package.json
+│   └── ...
+│
+├── backend/
+│   ├── routes/
+│   │   ├── voice.js
+│   │   ├── transactions.js
+│   │   └── queries.js
+│   │
+│   ├── services/
+│   │   ├── uplift.js
+│   │   ├── groq.js
+│   │   ├── finance.js
+│   │   └── storage.js
+│   │
+│   ├── data/
+│   │   └── transactions.json
+│   │
+│   ├── server.js
+│   ├── package.json
+│   ├── .env
+│   └── .env.example
+│
+├── .gitignore
+└── README.md
+```
+
+---
+
+# 6. ENVIRONMENT VARIABLES
+
+Backend `.env`:
+
+```env
+UPLIFTAI_API_KEY=
+UPLIFTAI_VOICE_ID=
+GROQ_API_KEY=
+PORT=3001
+```
+
+Create `.env.example` with blank values:
+
+```env
+UPLIFTAI_API_KEY=
+UPLIFTAI_VOICE_ID=
+GROQ_API_KEY=
+PORT=3001
+```
+
+Never hardcode API keys.
+
+Never put Uplift or Groq keys in React Native.
+
+The frontend should only know the backend URL.
+
+---
+
+# 7. DATA MODEL
+
+Every financial transaction should have:
+
+```typescript
+interface Transaction {
+  id: string;
+  amount: number;
+
+  type:
+    | "expense"
+    | "income"
+    | "given"
+    | "received";
+
+  person: string | null;
+
+  category: string | null;
+
+  description: string | null;
+
+  timestamp: string;
+}
+```
+
+Example:
+
+```json
+{
+  "id": "uuid",
+  "amount": 800,
+  "type": "expense",
+  "person": null,
+  "category": "transport",
+  "description": "petrol",
+  "timestamp": "2026-08-08T10:30:00.000Z"
+}
+```
+
+---
+
+# 8. STORAGE
+
+Use:
+
+```text
+backend/data/transactions.json
+```
+
+Initial content:
+
+```json
+[]
+```
+
+Create a storage service responsible for:
+
+* reading transactions
+* adding transactions
+* retrieving transactions
+* filtering transactions
+* calculating summaries
+
+Do not put file-system/database logic directly inside Express routes.
+
+---
+
+# 9. FOUR FINANCIAL TRANSACTION TYPES
+
+Only support these four types for the MVP:
+
+```text
+expense
+income
+given
+received
+```
+
+### expense
+
+Money the user spent.
+
+Example:
+
+> "میں نے آج 800 روپے پٹرول پر خرچ کیے۔"
+
+### income
+
+Money received as income.
+
+Example:
+
+> "آج مجھے دس ہزار روپے ملے۔"
+
+### given
+
+Money the user gave to another person.
+
+Example:
+
+> "میں نے علی کو دو ہزار روپے دیے۔"
+
+### received
+
+Money received back from another person.
+
+Example:
+
+> "علی نے پانچ سو روپے واپس کیے۔"
+
+---
+
+# 10. VOICE PIPELINE
+
+The most important flow in the entire application:
+
+```text
+User speaks
+    ↓
+Expo records audio
+    ↓
+Frontend uploads audio to Backend
+    ↓
+Backend → Uplift AI STT
+    ↓
+Urdu transcription
+    ↓
+Backend → Groq
+    ↓
+Structured JSON intent
+    ↓
+Backend validates intent
+    ↓
+Finance engine saves/calculates
+    ↓
+Backend creates Urdu response
+    ↓
+Backend → Uplift AI TTS
+    ↓
+Audio returned
+    ↓
+Expo plays audio
+```
+
+The user should experience this as one simple conversation.
+
+---
+
+# 11. SPEECH-TO-TEXT
+
+Create:
+
+```http
+POST /api/voice/transcribe
+```
+
+Accept:
+
+```text
+multipart/form-data
+audio=<recording>
+```
+
+Use multer.
+
+Send the audio to Uplift AI Speech-to-Text through the official SDK.
+
+Wrap the call in proper error handling.
+
+Return:
+
+```json
+{
+  "text": "میں نے علی کو دو ہزار روپے دیے"
+}
+```
+
+If transcription fails:
+
+```json
+{
+  "error": "آواز سمجھ نہیں آئی، دوبارہ کوشش کریں۔"
+}
+```
+
+Do not expose SDK errors directly to the user.
+
+Log useful technical errors on the backend.
+
+---
+
+# 12. GROQ INTENT EXTRACTION
+
+Create:
+
+```http
+POST /api/voice/extract
+```
+
+Input:
+
+```json
+{
+  "text": "میں نے علی کو دو ہزار روپے دیے"
+}
+```
+
+Send the transcription to Groq.
+
+Use a fast Groq model appropriate for structured JSON extraction.
+
+Do not make the model generate a conversational answer here.
+
+Its ONLY responsibility is extracting structured intent.
+
+---
+
+# 13. GROQ SYSTEM PROMPT
+
+Use a strict system prompt similar to:
+
+```text
+You are the financial intent extraction engine for Awaz Khata,
+a Pakistani voice-first personal finance assistant.
+
+The user speaks naturally in Urdu, Roman Urdu, English,
+or mixed Urdu and English.
+
+Your job is ONLY to understand the user's financial intent
+and return valid JSON.
+
+Never return markdown.
+Never return explanations.
+Never return code fences.
+Return JSON only.
+
+SUPPORTED TRANSACTION TYPES:
+
+expense:
+Money the user spends.
+
+income:
+Money the user receives as income.
+
+given:
+Money the user gives to another person.
+
+received:
+Money the user receives back from another person.
+
+TRANSACTION FORMAT:
+
+{
+  "mode": "transaction",
+  "type": "expense | income | given | received",
+  "amount": number,
+  "person": "string or null",
+  "category": "string or null",
+  "description": "string or null"
+}
+
+SUPPORTED QUERIES:
+
+{
+  "mode": "query",
+  "query_type": "total_expenses | total_income | person_given | person_received | person_balance | today_summary | monthly_summary | category_summary | recent_transactions",
+  "period": "today | this_week | this_month | all_time | null",
+  "person": "string or null",
+  "category": "string or null"
+}
+
+RULES:
+
+1. Never invent an amount.
+2. Never invent a person.
+3. Convert Urdu number words into numbers.
+4. Understand Pakistani Urdu expressions.
+5. Understand Roman Urdu.
+6. Understand English.
+7. Understand mixed language.
+8. Preserve person names.
+9. Do not calculate financial balances.
+10. The backend will perform calculations.
+11. If the request is ambiguous, return:
+
+{
+  "mode": "unknown"
+}
+
+Examples:
+
+"میں نے 800 روپے پٹرول پر خرچ کیے"
+
+→ transaction / expense / 800 / transport
+
+"میں نے علی کو دو ہزار روپے دیے"
+
+→ transaction / given / 2000 / Ali
+
+"علی نے پانچ سو روپے واپس کیے"
+
+→ transaction / received / 500 / Ali
+
+"میں نے آج کتنے پیسے خرچ کیے؟"
+
+→ query / total_expenses / today
+
+"علی کے کتنے پیسے باقی ہیں؟"
+
+→ query / person_balance / Ali
+```
+
+Use structured JSON output if the selected Groq model/API supports it.
+
+Still validate the response server-side.
+
+---
+
+# 14. VALIDATE GROQ RESPONSE
+
+Never trust the model blindly.
+
+Validate:
+
+* mode
+* transaction type
+* amount
+* query type
+* person
+* category
+
+Reject invalid responses.
+
+Return:
+
+```json
+{
+  "error": "میں آپ کی بات سمجھ نہیں سکا۔ دوبارہ بولیں۔"
+}
+```
+
+---
+
+# 15. FINANCE ENGINE
+
+Create:
+
+```text
+backend/services/finance.js
+```
+
+This is the source of truth for financial calculations.
+
+The LLM must NEVER calculate balances.
+
+---
+
+## Total expenses
+
+Sum:
+
+```text
+type === "expense"
+```
+
+---
+
+## Total income
+
+Sum:
+
+```text
+type === "income"
+```
+
+---
+
+## Person given
+
+For person:
+
+```text
+sum(given)
+```
+
+---
+
+## Person received
+
+For person:
+
+```text
+sum(received)
+```
+
+---
+
+## Person balance
+
+```text
+given - received
+```
+
+Example:
+
+Ali:
+
+```text
+Given: 5000
+Received: 2000
+Remaining: 3000
+```
+
+Response:
+
+> "علی کے ذمے ابھی تین ہزار روپے ہیں۔"
+
+---
+
+# 16. TRANSACTION API
+
+Create:
+
+```http
+POST /api/transactions
+```
+
+Input:
+
+```json
+{
+  "amount": 800,
+  "type": "expense",
+  "person": null,
+  "category": "transport",
+  "description": "petrol"
+}
+```
+
+Backend generates:
+
+* UUID
+* timestamp
+
+Save to JSON.
+
+Return saved transaction.
+
+---
+
+# 17. GET TRANSACTIONS
+
+Create:
+
+```http
+GET /api/transactions
+```
+
+Return:
+
+```json
+{
+  "transactions": [],
+  "summary": {
+    "income": 0,
+    "expenses": 0,
+    "given": 0,
+    "received": 0
+  }
+}
+```
+
+---
+
+# 18. PERSON QUERY
+
+Create:
+
+```http
+GET /api/transactions/person/:person
+```
+
+Return:
+
+```json
+{
+  "person": "Ali",
+  "given": 5000,
+  "received": 2000,
+  "balance": 3000,
+  "transactions": []
+}
+```
+
+Match names case-insensitively.
+
+---
+
+# 19. FINANCIAL QUERY API
+
+Create:
+
+```http
+POST /api/query
+```
+
+The frontend/backend should pass the structured query from Groq.
+
+Example:
+
+```json
+{
+  "query_type": "person_balance",
+  "period": "all_time",
+  "person": "Ali"
+}
+```
+
+The finance engine calculates the result.
+
+Return:
+
+```json
+{
+  "result": {
+    "person": "Ali",
+    "given": 5000,
+    "received": 2000,
+    "balance": 3000
+  },
+  "responseText": "علی کے ذمے ابھی 3000 روپے ہیں۔"
+}
+```
+
+---
+
+# 20. URDU RESPONSE GENERATION
+
+Do NOT call Groq just to create simple responses.
+
+Use deterministic templates.
+
+Examples:
+
+### Expense
+
+```text
+800 روپے پٹرول کے خرچے میں شامل کر دیے ہیں۔
+```
+
+### Income
+
+```text
+5000 روپے آمدن میں شامل کر دیے ہیں۔
+```
+
+### Given
+
+```text
+علی کو 2000 روپے دے دیے گئے ہیں۔
+```
+
+### Received
+
+```text
+علی سے 500 روپے واپس مل گئے ہیں۔
+```
+
+### Today's expenses
+
+```text
+آپ نے آج 2800 روپے خرچ کیے ہیں۔
+```
+
+### Monthly expenses
+
+```text
+آپ نے اس مہینے 24500 روپے خرچ کیے ہیں۔
+```
+
+### Person balance
+
+```text
+علی کے ذمے ابھی 3000 روپے ہیں۔
+```
+
+Keep spoken responses short and natural.
+
+---
+
+# 21. UPLIFT TEXT-TO-SPEECH
+
+Create:
+
+```http
+POST /api/voice/speak
+```
+
+Input:
+
+```json
+{
+  "text": "علی کے ذمے ابھی 3000 روپے ہیں۔"
+}
+```
+
+Use the Uplift AI SDK's TTS functionality.
+
+Use the configured voice ID:
+
+```env
+UPLIFTAI_VOICE_ID=
+```
+
+Use a natural Urdu voice.
+
+Prefer MP3 output suitable for Expo playback.
+
+Return:
+
+```json
+{
+  "audio": "BASE64_AUDIO",
+  "contentType": "audio/mpeg"
+}
+```
+
+If Uplift's SDK provides a better streaming mechanism that is reliable with Expo, it may be used instead, but prioritize simplicity for the hackathon.
+
+---
+
+# 22. FRONTEND API SERVICE
+
+Create:
+
+```text
+frontend/services/api.ts
+```
+
+Use ONE easily configurable constant:
+
+```typescript
+const API_BASE_URL = "YOUR_REPLIT_BACKEND_URL";
+```
+
+All backend requests must go through this service.
+
+Functions should include:
+
+```typescript
+transcribeAudio()
+extractIntent()
+saveTransaction()
+runQuery()
+getTransactions()
+getPersonTransactions()
+speakText()
+```
+
+Never call Uplift AI or Groq directly from the frontend.
+
+---
+
+# 23. AUDIO SERVICE
+
+Create:
+
+```text
+frontend/services/audio.ts
+```
+
+Handle:
+
+* microphone permissions
+* audio recording
+* stopping recording
+* audio playback
+* cleanup
+* playback completion
+
+Use the Expo audio APIs compatible with the installed Expo SDK.
+
+Before installing packages, check that all Expo packages are compatible with the chosen Expo SDK.
+
+Do not mix random package versions.
+
+---
+
+# 24. MAIN SCREEN
+
+Create:
+
+```text
+frontend/app/index.tsx
+```
+
+This is the primary screen.
+
+Design:
+
+```text
+              آواز کھاتہ
+
+       اپنے پیسوں کا حساب
+             بس بول کر
+
+          آج کا خرچ
+           Rs. 2,850
+
+              🎙️
+
+        بولنے کے لیے دبائیں
+
+
+          حالیہ سرگرمیاں
+
+✓ پٹرول                 Rs. 800
+✓ علی کو دیے          Rs. 2,000
+✓ کھانا                 Rs. 500
+
+
+       پورا کھاتہ دیکھیں
+```
+
+Use a very large microphone button.
+
+The microphone is the hero interaction.
+
+---
+
+# 25. VOICE STATES
+
+Implement:
+
+```typescript
+type VoiceState =
+  | "idle"
+  | "listening"
+  | "processing"
+  | "speaking";
+```
+
+### idle
+
+```text
+بولنے کے لیے دبائیں
+```
+
+### listening
+
+```text
+سن رہا ہوں...
+```
+
+### processing
+
+```text
+سمجھ رہا ہوں...
+```
+
+### speaking
+
+```text
+جواب دے رہا ہوں...
+```
+
+The UI should clearly communicate each state.
+
+---
+
+# 26. MICROPHONE FLOW
+
+When user taps:
+
+```text
+idle → listening
+```
+
+Start recording.
+
+When user taps again:
+
+```text
+listening → processing
+```
+
+Stop recording.
+
+Then:
+
+```text
+audio
+ ↓
+POST /api/voice/transcribe
+ ↓
+transcription
+ ↓
+POST /api/voice/extract
+ ↓
+intent
+```
+
+If transaction:
+
+```text
+intent
+ ↓
+POST /api/transactions
+ ↓
+generate Urdu confirmation
+ ↓
+POST /api/voice/speak
+ ↓
+play audio
+```
+
+If query:
+
+```text
+intent
+ ↓
+POST /api/query
+ ↓
+generate Urdu response
+ ↓
+POST /api/voice/speak
+ ↓
+play audio
+```
+
+Then:
+
+```text
+speaking → idle
+```
+
+---
+
+# 27. ACTIVITY LIST
+
+Below the microphone show the latest 3–5 transactions.
+
+Example:
+
+```text
+✓ پٹرول
+  - Rs. 800
+
+✓ علی کو دیے
+  - Rs. 2,000
+
+✓ کھانا
+  - Rs. 500
+```
+
+Keep it simple.
+
+---
+
+# 28. LEDGER SCREEN
+
+Create:
+
+```text
+frontend/app/ledger.tsx
+```
+
+Title:
+
+```text
+میرا کھاتہ
+```
+
+Show a simple summary:
+
+```text
+آمدن
+Rs. 85,000
+
+خرچ
+Rs. 42,500
+
+لوگوں کو دیے
+Rs. 12,000
+
+واپس آئے
+Rs. 5,000
+```
+
+Then show transaction history.
+
+Use bordered rows rather than complicated cards.
+
+---
+
+# 29. PERSON SECTION
+
+If transactions contain people, show a simple section:
+
+```text
+لوگوں کا حساب
+
+علی             Rs. 3,000
+احمد             Rs. 1,500
+حسن              Rs. 0
+```
+
+Red amount:
+
+User is owed money.
+
+Green:
+
+Settled / zero balance.
+
+Keep this visually simple.
+
+---
+
+# 30. NAVIGATION
+
+Use Expo Router.
+
+Routes:
+
+```text
+/
+ /ledger
+```
+
+No complicated navigation architecture.
+
+---
+
+# 31. RTL + URDU
+
+The application must be friendly to Urdu.
+
+Use:
+
+```text
+text-right
+```
+
+where appropriate.
+
+Use RTL layout where appropriate.
+
+Make Urdu the primary visual language.
+
+English can appear in small technical labels only when necessary.
+
+The app should feel designed for Pakistan, not like an English finance app translated into Urdu.
+
+---
+
+# 32. DESIGN PRINCIPLES
+
+Use NativeWind.
+
+Design should be:
+
+* minimal
+* modern
+* flat
+* high contrast
+* large typography
+* large tap targets
+* generous spacing
+* RTL friendly
+* voice-first
+
+Avoid:
+
+* excessive gradients
+* complicated charts
+* excessive cards
+* tiny buttons
+* crowded dashboards
+* unnecessary animations
+
+The microphone should visually dominate the experience.
+
+---
+
+# 33. ERROR HANDLING
+
+Every API should return:
+
+```json
+{
+  "error": "message"
+}
+```
+
+Frontend should gracefully handle:
+
+* microphone permission denied
+* recording failure
+* empty audio
+* Uplift STT failure
+* Groq failure
+* invalid JSON
+* invalid intent
+* TTS failure
+* network timeout
+* backend unavailable
+
+Example user message:
+
+```text
+آواز سمجھ نہیں آئی۔
+دوبارہ کوشش کریں۔
+```
+
+After every error:
+
+```text
+state → idle
+```
+
+Never leave the user stuck in:
+
+```text
+processing
+```
+
+---
+
+# 34. DEMO COMMANDS
+
+The following must work reliably.
+
+### Command 1
+
+User says:
+
+> "آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے۔"
+
+Expected:
+
+```text
+expense
+800
+transport
+petrol
+```
+
+Voice response:
+
+> "800 روپے پٹرول کے خرچے میں شامل کر دیے ہیں۔"
+
+---
+
+### Command 2
+
+User says:
+
+> "میں نے علی کو دو ہزار روپے دیے۔"
+
+Expected:
+
+```text
+given
+2000
+Ali
+```
+
+Response:
+
+> "علی کو دو ہزار روپے دے دیے گئے ہیں۔"
+
+---
+
+### Command 3
+
+User says:
+
+> "علی نے پانچ سو روپے واپس کیے۔"
+
+Expected:
+
+```text
+received
+500
+Ali
+```
+
+Response:
+
+> "علی سے پانچ سو روپے واپس مل گئے ہیں۔"
+
+---
+
+### Command 4
+
+User says:
+
+> "میں نے آج کتنے پیسے خرچ کیے؟"
+
+Calculate from actual transaction data.
+
+Response:
+
+> "آپ نے آج 2800 روپے خرچ کیے ہیں۔"
+
+---
+
+### Command 5
+
+User says:
+
+> "علی کے کتنے پیسے باقی ہیں؟"
+
+Calculate:
+
+```text
+given - received
+```
+
+Response:
+
+> "علی کے ذمے ابھی پندرہ سو روپے ہیں۔"
+
+---
+
+### Command 6
+
+User says:
+
+> "اس مہینے میرا سب سے زیادہ خرچہ کہاں ہوا؟"
+
+Calculate category totals from actual data.
+
+Response should mention the highest-spending category.
+
+---
+
+# 35. DO NOT BUILD
+
+Do NOT build:
+
+* authentication
+* bank integrations
+* payment gateways
+* credit cards
+* investment tracking
+* stocks
+* cryptocurrency
+* complex budgeting
+* financial forecasting
+* subscription system
+* social features
+* chat history
+* complicated AI financial advisor
+* cloud database
+* admin dashboard
+
+The MVP is intentionally small.
+
+---
+
+# 36. SECURITY
+
+Never expose:
+
+```text
+UPLIFTAI_API_KEY
+GROQ_API_KEY
+```
+
+to the frontend.
+
+Only the backend accesses them.
+
+Add:
+
+```text
+.env
+```
+
+to `.gitignore`.
+
+Provide:
+
+```text
+.env.example
+```
+
+with blank values.
+
+---
+
+# 37. REPLIT DEPLOYMENT
+
+The project must work well on Replit.
+
+Backend should listen on:
+
+```javascript
+process.env.PORT || 3001
+```
+
+Do not hardcode localhost for the backend.
+
+The frontend must have one configurable:
+
+```text
+API_BASE_URL
+```
+
+which can be changed to the deployed Replit backend URL.
+
+README must explain:
+
+1. How to install dependencies.
+2. How to configure environment variables.
+3. How to start backend.
+4. How to start Expo.
+5. How to point the Expo app to the Replit backend.
+6. How to test the voice pipeline.
+
+---
+
+# 38. BUILD ORDER
+
+Do not attempt to polish everything first.
+
+Build in this exact order:
+
+### Step 1
+
+Create the Expo Router frontend.
+
+### Step 2
+
+Create the Express backend.
+
+### Step 3
+
+Connect Uplift Speech-to-Text.
+
+Test it independently.
+
+### Step 4
+
+Connect Groq.
+
+Test Urdu → structured JSON.
+
+### Step 5
+
+Build transaction storage.
+
+### Step 6
+
+Build finance calculations.
+
+### Step 7
+
+Connect Uplift Text-to-Speech.
+
+### Step 8
+
+Connect Expo audio recording.
+
+### Step 9
+
+Connect the complete voice pipeline.
+
+### Step 10
+
+Build the minimal UI.
+
+### Step 11
+
+Test the five demo commands repeatedly.
+
+Only after the entire pipeline works should you spend time on visual polish.
+
+---
+
+# 39. FINAL PRODUCT PHILOSOPHY
+
+Do NOT think:
+
+> "I am building an expense tracker with voice input."
+
+Think:
+
+> **"I am building a Pakistani voice assistant that remembers and manages my money."**
+
+The user shouldn't need to navigate menus.
+
+They shouldn't need to manually select categories.
+
+They shouldn't need to type transactions.
+
+They simply speak.
+
+Examples:
+
+> "آج پٹرول پر آٹھ سو لگ گئے۔"
+
+> "علی کو دو ہزار دیے۔"
+
+> "علی نے پانچ سو واپس کیے۔"
+
+> "میں نے آج کتنے خرچے کیے؟"
+
+> "اس مہینے کھانے پر کتنا خرچ ہوا؟"
+
+> "علی کے کتنے پیسے باقی ہیں؟"
+
+The application should understand the speech, store the financial event, calculate the correct result, and speak the answer naturally in Urdu.
+
+---
+
+# 40. DEFINITION OF DONE
+
+The project is complete only when this entire flow works:
+
+```text
+USER
+ ↓
+Speaks Urdu
+ ↓
+Expo Audio Recording
+ ↓
+Backend
+ ↓
+Uplift AI STT
+ ↓
+Urdu Text
+ ↓
+Groq
+ ↓
+Structured Financial Intent
+ ↓
+Backend Validation
+ ↓
+Finance Engine
+ ↓
+JSON Storage
+ ↓
+Urdu Response
+ ↓
+Uplift AI TTS
+ ↓
+Audio
+ ↓
+Expo Playback
+ ↓
+USER HEARS ANSWER
+```
+
+The final application should feel almost like:
+
+**"Alexa/Siri for personal finances — but built for Pakistan and Urdu."**
+
+Prioritize:
+
+**1. Voice reliability**
+
+**2. Uplift AI integration**
+
+**3. Correct financial calculations**
+
+**4. Fast Groq intent extraction**
+
+**5. Simple Urdu UX**
+
+**6. Live demo reliability**
+
+**7. Visual polish**
+
+Do not sacrifice working functionality for unnecessary features.
+
+Build everything from scratch.

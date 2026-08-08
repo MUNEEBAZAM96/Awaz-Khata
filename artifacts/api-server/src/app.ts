@@ -1,5 +1,9 @@
-import express, { type Express } from "express";
+import express, {
+  type Express,
+  type ErrorRequestHandler,
+} from "express";
 import cors from "cors";
+import multer from "multer";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -30,5 +34,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Every error — including Multer upload errors and async route failures —
+// must reach the client as { error: "<Urdu message>" }, never Express's
+// default HTML error page.
+const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  req.log?.error({ err }, "Unhandled error");
+  if (err instanceof multer.MulterError) {
+    res.status(400).json({ error: "آواز کی فائل قبول نہیں ہوئی، دوبارہ کوشش کریں۔" });
+    return;
+  }
+  res.status(500).json({ error: "کچھ غلط ہو گیا، دوبارہ کوشش کریں۔" });
+};
+app.use(errorHandler);
 
 export default app;

@@ -5,8 +5,10 @@
  * Voice-first Urdu personal finance assistant backend (Uplift AI STT/TTS + LLM intent extraction + finance engine).
  * OpenAPI spec version: 2.0.0
  */
+import type { Transaction } from './transaction';
 
-export interface SpeakRequest {
-  /** @minLength 1 */
-  text: string;
+export interface CreateTransactionResult {
+  transaction: Transaction;
+  /** Deterministic Urdu confirmation sentence to speak aloud */
+  responseText: string;
 }

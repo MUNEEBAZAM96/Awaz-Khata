@@ -1,50 +1,41 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
-  title: Api
-  version: 0.1.0
-  description: Awaz Khata API - voice-first Urdu ledger
+  title: Awaz Khata API
+  description: Voice-first Urdu personal finance assistant backend (Uplift AI STT/TTS + LLM intent extraction + finance engine).
+  version: 2.0.0
+
 servers:
   - url: /api
-    description: Base API path
-tags:
-  - name: health
-    description: Health operations
-  - name: voice
-    description: Speech-to-text, extraction, and text-to-speech
-  - name: ledger
-    description: Customer credit ledger operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
-      tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
-          description: Healthy
+          description: Service is healthy
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
-  /transcribe:
+
+  /voice/transcribe:
     post:
       operationId: transcribeAudio
-      tags: [voice]
-      summary: Transcribe an Urdu audio recording
-      description: Accepts a multipart audio upload (field name "audio") and returns the transcribed Urdu text.
+      summary: Transcribe an Urdu voice recording to text (Uplift AI STT)
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
+              required: [audio]
               properties:
                 audio:
                   type: string
                   format: binary
-              required: [audio]
+                  description: Recorded audio file (m4a/webm/wav)
       responses:
         "200":
           description: Transcription result
@@ -53,22 +44,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/TranscriptionResult"
         "400":
-          description: Missing or invalid audio
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
+          $ref: "#/components/responses/BadRequest"
         "502":
-          description: Speech-to-text provider failure
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-  /extract:
+          $ref: "#/components/responses/UpstreamError"
+
+  /voice/extract:
     post:
       operationId: extractIntent
-      tags: [voice]
-      summary: Extract a transaction or query intent from transcribed text
+      summary: Extract a structured financial intent from transcribed text (LLM)
       requestBody:
         required: true
         content:
@@ -77,88 +60,20 @@ paths:
               $ref: "#/components/schemas/ExtractRequest"
       responses:
         "200":
-          description: Parsed intent
+          description: Structured intent
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExtractResult"
         "400":
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
+          $ref: "#/components/responses/BadRequest"
         "502":
-          description: LLM provider failure or unparseable response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-  /transactions:
-    post:
-      operationId: createTransaction
-      tags: [ledger]
-      summary: Save a new transaction
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TransactionInput"
-      responses:
-        "201":
-          description: Saved transaction
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Transaction"
-        "400":
-          description: Invalid transaction
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-    get:
-      operationId: listCustomers
-      tags: [ledger]
-      summary: List all customers with running balances and history
-      responses:
-        "200":
-          description: All customers with balances
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CustomerList"
-  /transactions/{customer}:
-    get:
-      operationId: getCustomerLedger
-      tags: [ledger]
-      summary: Get balance and history for one customer (case-insensitive)
-      parameters:
-        - name: customer
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Customer ledger
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CustomerLedger"
-        "404":
-          description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-  /speak:
+          $ref: "#/components/responses/UpstreamError"
+
+  /voice/speak:
     post:
       operationId: speakText
-      tags: [voice]
-      summary: Convert Urdu text to speech
-      description: Returns MP3 audio as a base64 string.
+      summary: Convert Urdu text to speech (Uplift AI TTS)
       requestBody:
         required: true
         content:
@@ -167,166 +82,333 @@ paths:
               $ref: "#/components/schemas/SpeakRequest"
       responses:
         "200":
-          description: Synthesized audio
+          description: Base64 MP3 audio
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SpeakResult"
         "400":
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
+          $ref: "#/components/responses/BadRequest"
         "502":
-          description: Text-to-speech provider failure
+          $ref: "#/components/responses/UpstreamError"
+
+  /transactions:
+    post:
+      operationId: createTransaction
+      summary: Save a financial transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Saved transaction plus a spoken Urdu confirmation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: "#/components/schemas/CreateTransactionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      operationId: listTransactions
+      summary: List all transactions with overall summary
+      responses:
+        "200":
+          description: All transactions (newest first) and totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionsList"
+
+  /transactions/person/{person}:
+    get:
+      operationId: getPersonLedger
+      summary: Get one person's given/received totals and balance (case-insensitive)
+      parameters:
+        - name: person
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Person ledger
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonLedger"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /query:
+    post:
+      operationId: runQuery
+      summary: Run a structured financial query through the finance engine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+      responses:
+        "200":
+          description: Query result with a spoken Urdu response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
 components:
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    UpstreamError:
+      description: Upstream AI service failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
+          enum: [ok]
+
     ApiError:
       type: object
+      required: [error]
       properties:
         error:
           type: string
-      required:
-        - error
+
     TranscriptionResult:
       type: object
+      required: [text]
       properties:
         text:
           type: string
-      required:
-        - text
+          description: Urdu transcription of the audio
+
     ExtractRequest:
       type: object
+      required: [text]
       properties:
         text:
           type: string
           minLength: 1
-      required:
-        - text
+
     ExtractResult:
       type: object
-      description: Either a transaction to record (mode=transaction) or a balance query (mode=query).
+      description: >
+        Structured intent. mode=transaction fills type/amount/person/category/description;
+        mode=query fills query_type/period/person/category; mode=unknown has no other fields.
+      required: [mode]
       properties:
         mode:
           type: string
-          enum: [transaction, query]
-        customer:
-          type: string
-        amount:
-          type: number
+          enum: [transaction, query, unknown]
         type:
           type: string
-          enum: [credit, payment]
-        item:
-          type: [string, "null"]
-      required:
-        - mode
-        - customer
+          enum: [expense, income, given, received]
+          nullable: true
+        amount:
+          type: number
+          nullable: true
+        person:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        query_type:
+          type: string
+          enum:
+            - total_expenses
+            - total_income
+            - person_given
+            - person_received
+            - person_balance
+            - today_summary
+            - monthly_summary
+            - category_summary
+            - recent_transactions
+          nullable: true
+        period:
+          type: string
+          enum: [today, this_week, this_month, all_time]
+          nullable: true
+
     TransactionInput:
       type: object
+      required: [amount, type]
       properties:
-        customer:
-          type: string
-          minLength: 1
         amount:
           type: number
+          description: Rupee amount (positive)
         type:
           type: string
-          enum: [credit, payment]
-        item:
-          type: [string, "null"]
-      required:
-        - customer
-        - amount
-        - type
+          enum: [expense, income, given, received]
+        person:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
     Transaction:
       type: object
+      required: [id, amount, type, person, category, description, timestamp]
       properties:
         id:
           type: string
-        customer:
-          type: string
         amount:
           type: number
         type:
           type: string
-          enum: [credit, payment]
-        item:
-          type: [string, "null"]
+          enum: [expense, income, given, received]
+        person:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
         timestamp:
           type: string
-      required:
-        - id
-        - customer
-        - amount
-        - type
-        - timestamp
-    CustomerSummary:
+          format: date-time
+
+    CreateTransactionResult:
       type: object
+      required: [transaction, responseText]
       properties:
-        customer:
+        transaction:
+          $ref: "#/components/schemas/Transaction"
+        responseText:
           type: string
-        balance:
+          description: Deterministic Urdu confirmation sentence to speak aloud
+
+    Summary:
+      type: object
+      required: [income, expenses, given, received]
+      properties:
+        income:
           type: number
+        expenses:
+          type: number
+        given:
+          type: number
+        received:
+          type: number
+
+    TransactionsList:
+      type: object
+      required: [transactions, summary]
+      properties:
         transactions:
           type: array
           items:
             $ref: "#/components/schemas/Transaction"
-      required:
-        - customer
-        - balance
-        - transactions
-    CustomerList:
+        summary:
+          $ref: "#/components/schemas/Summary"
+
+    PersonLedger:
       type: object
+      required: [person, given, received, balance, transactions]
       properties:
-        customers:
-          type: array
-          items:
-            $ref: "#/components/schemas/CustomerSummary"
-      required:
-        - customers
-    CustomerLedger:
-      type: object
-      properties:
-        customer:
+        person:
           type: string
+        given:
+          type: number
+        received:
+          type: number
         balance:
           type: number
+          description: given - received (what the person still owes the user)
         transactions:
           type: array
           items:
             $ref: "#/components/schemas/Transaction"
-      required:
-        - customer
-        - balance
-        - transactions
+
+    QueryRequest:
+      type: object
+      required: [query_type]
+      properties:
+        query_type:
+          type: string
+          enum:
+            - total_expenses
+            - total_income
+            - person_given
+            - person_received
+            - person_balance
+            - today_summary
+            - monthly_summary
+            - category_summary
+            - recent_transactions
+        period:
+          type: string
+          enum: [today, this_week, this_month, all_time]
+          nullable: true
+        person:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+
+    QueryResult:
+      type: object
+      required: [result, responseText]
+      properties:
+        result:
+          type: object
+          additionalProperties: true
+          description: Raw calculation result from the finance engine
+        responseText:
+          type: string
+          description: Deterministic Urdu sentence to speak aloud
+
     SpeakRequest:
       type: object
+      required: [text]
       properties:
         text:
           type: string
           minLength: 1
-      required:
-        - text
+
     SpeakResult:
       type: object
+      required: [audio, contentType]
       properties:
-        audioBase64:
+        audio:
           type: string
-        mimeType:
+          description: Base64-encoded MP3 audio
+        contentType:
           type: string
-      required:
-        - audioBase64
-        - mimeType
+          description: e.g. audio/mpeg

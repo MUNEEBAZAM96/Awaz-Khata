@@ -6,7 +6,9 @@
  * OpenAPI spec version: 2.0.0
  */
 
-export interface SpeakRequest {
-  /** @minLength 1 */
-  text: string;
+export interface Summary {
+  income: number;
+  expenses: number;
+  given: number;
+  received: number;
 }

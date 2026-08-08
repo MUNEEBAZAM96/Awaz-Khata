@@ -6,7 +6,9 @@
  * OpenAPI spec version: 2.0.0
  */
 
-export interface SpeakRequest {
-  /** @minLength 1 */
-  text: string;
-}
+export type HealthStatusStatus = typeof HealthStatusStatus[keyof typeof HealthStatusStatus];
+
+
+export const HealthStatusStatus = {
+  ok: 'ok',
+} as const;

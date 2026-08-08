@@ -5,8 +5,9 @@
  * Voice-first Urdu personal finance assistant backend (Uplift AI STT/TTS + LLM intent extraction + finance engine).
  * OpenAPI spec version: 2.0.0
  */
+import type { ApiError } from './apiError';
 
-export interface SpeakRequest {
-  /** @minLength 1 */
-  text: string;
-}
+/**
+ * Not found
+ */
+export type NotFoundResponse = ApiError;

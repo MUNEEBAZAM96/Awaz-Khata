@@ -1,0 +1,1 @@
+- [api-zod barrel collision](api-zod-barrel-collision.md) — orval codegen overwrites the barrel and reintroduces a const/type name collision for multipart endpoints; re-fix with explicit exports after every codegen.

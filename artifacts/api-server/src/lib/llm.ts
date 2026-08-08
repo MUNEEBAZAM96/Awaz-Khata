@@ -1,40 +1,131 @@
 import { z } from "zod/v4";
 
-const extractSchema = z.union([
-  z.object({
-    mode: z.literal("transaction"),
-    customer: z.string().min(1),
-    amount: z.number(),
-    type: z.enum(["credit", "payment"]),
-    item: z.string().nullable().optional(),
-  }),
-  z.object({
-    mode: z.literal("query"),
-    customer: z.string().min(1),
-  }),
-]);
+const transactionIntent = z.object({
+  mode: z.literal("transaction"),
+  type: z.enum(["expense", "income", "given", "received"]),
+  amount: z.number().positive(),
+  person: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+});
 
-export type ExtractedIntent = z.infer<typeof extractSchema>;
+const queryIntent = z.object({
+  mode: z.literal("query"),
+  query_type: z.enum([
+    "total_expenses",
+    "total_income",
+    "person_given",
+    "person_received",
+    "person_balance",
+    "today_summary",
+    "monthly_summary",
+    "category_summary",
+    "recent_transactions",
+  ]),
+  period: z
+    .enum(["today", "this_week", "this_month", "all_time"])
+    .nullable()
+    .optional(),
+  person: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+});
 
-const SYSTEM_PROMPT = `You are a strict information extraction engine for an Urdu voice ledger app used by Pakistani shopkeepers ("udhaar khata").
-The user speaks in Urdu (possibly with Punjabi or English mixed in). You receive the transcribed text.
+const unknownIntent = z.object({ mode: z.literal("unknown") });
 
-You must ALWAYS respond with strict JSON only — no markdown, no code fences, no explanation. Exactly one of these two shapes:
+const intentSchema = z.union([transactionIntent, queryIntent, unknownIntent]);
 
-Transaction (the shopkeeper is recording that a customer took credit/udhaar, or made a payment):
-{"mode": "transaction", "customer": "name", "amount": number, "type": "credit" | "payment", "item": "string or null"}
+export type ExtractedIntent = z.infer<typeof intentSchema>;
 
-Query (the shopkeeper is asking about a customer's balance or account):
-{"mode": "query", "customer": "name"}
+const SYSTEM_PROMPT = `You are the financial intent extraction engine for Awaz Khata,
+a Pakistani voice-first personal finance assistant.
 
-Rules:
-- "credit" means the customer took goods on credit / owes more (e.g. "udhaar diya", "khaate mein likho", "le gaya").
-- "payment" means the customer paid money back (e.g. "wapis kiye", "jama karaye", "de diye", "paise diye").
-- amount is the numeric rupee amount. Convert Urdu number words to digits (e.g. "paanch sau" -> 500, "do hazaar" -> 2000).
-- customer is the person's name as spoken, kept in the original script (Urdu or Latin) as transcribed.
-- item is the product mentioned (e.g. "aata", "cheeni", "doodh") or null if none mentioned.
-- If the user asks "kitna hai", "kitne paise", "hisaab batao", "balance" for a person, it is a query.
-- Respond with the JSON object only.`;
+The user speaks naturally in Urdu, Roman Urdu, English,
+or mixed Urdu and English.
+
+Your job is ONLY to understand the user's financial intent
+and return valid JSON.
+
+Never return markdown.
+Never return explanations.
+Never return code fences.
+Return JSON only.
+
+SUPPORTED TRANSACTION TYPES:
+
+expense:
+Money the user spends.
+
+income:
+Money the user receives as income.
+
+given:
+Money the user gives to another person.
+
+received:
+Money the user receives back from another person.
+
+TRANSACTION FORMAT:
+
+{
+  "mode": "transaction",
+  "type": "expense | income | given | received",
+  "amount": number,
+  "person": "string or null",
+  "category": "string or null",
+  "description": "string or null"
+}
+
+SUPPORTED QUERIES:
+
+{
+  "mode": "query",
+  "query_type": "total_expenses | total_income | person_given | person_received | person_balance | today_summary | monthly_summary | category_summary | recent_transactions",
+  "period": "today | this_week | this_month | all_time | null",
+  "person": "string or null",
+  "category": "string or null"
+}
+
+RULES:
+
+1. Never invent an amount.
+2. Never invent a person.
+3. Convert Urdu number words into numbers (e.g. "آٹھ سو" -> 800, "دو ہزار" -> 2000, "پندرہ سو" -> 1500).
+4. Understand Pakistani Urdu expressions.
+5. Understand Roman Urdu.
+6. Understand English.
+7. Understand mixed language.
+8. Preserve person names exactly as spoken.
+9. Do not calculate financial balances.
+10. The backend will perform calculations.
+11. Keep category as a short lowercase word (e.g. "transport", "food", "groceries") and description as the specific thing (e.g. "petrol").
+12. If the request is ambiguous or not financial, return:
+
+{
+  "mode": "unknown"
+}
+
+Examples:
+
+"میں نے 800 روپے پٹرول پر خرچ کیے"
+→ {"mode":"transaction","type":"expense","amount":800,"person":null,"category":"transport","description":"پٹرول"}
+
+"میں نے علی کو دو ہزار روپے دیے"
+→ {"mode":"transaction","type":"given","amount":2000,"person":"علی","category":null,"description":null}
+
+"علی نے پانچ سو روپے واپس کیے"
+→ {"mode":"transaction","type":"received","amount":500,"person":"علی","category":null,"description":null}
+
+"آج مجھے دس ہزار روپے ملے"
+→ {"mode":"transaction","type":"income","amount":10000,"person":null,"category":null,"description":null}
+
+"میں نے آج کتنے پیسے خرچ کیے؟"
+→ {"mode":"query","query_type":"total_expenses","period":"today","person":null,"category":null}
+
+"علی کے کتنے پیسے باقی ہیں؟"
+→ {"mode":"query","query_type":"person_balance","period":"all_time","person":"علی","category":null}
+
+"اس مہینے میرا سب سے زیادہ خرچہ کہاں ہوا؟"
+→ {"mode":"query","query_type":"category_summary","period":"this_month","person":null,"category":null}`;
 
 interface ProviderConfig {
   url: string;
@@ -60,6 +151,13 @@ function stripCodeFences(text: string): string {
   const trimmed = text.trim();
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
   return fenced?.[1] ?? trimmed;
+}
+
+export class IntentValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IntentValidationError";
+  }
 }
 
 export async function extractIntent(text: string): Promise<ExtractedIntent> {
@@ -105,13 +203,15 @@ export async function extractIntent(text: string): Promise<ExtractedIntent> {
   try {
     parsed = JSON.parse(stripCodeFences(content));
   } catch {
-    throw new Error(`LLM returned invalid JSON: ${content.slice(0, 300)}`);
+    throw new IntentValidationError(
+      `LLM returned invalid JSON: ${content.slice(0, 200)}`,
+    );
   }
 
-  const result = extractSchema.safeParse(parsed);
+  const result = intentSchema.safeParse(parsed);
   if (!result.success) {
-    throw new Error(
-      `LLM JSON did not match expected shape: ${content.slice(0, 300)}`,
+    throw new IntentValidationError(
+      `LLM JSON failed validation: ${content.slice(0, 200)}`,
     );
   }
   return result.data;

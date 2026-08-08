@@ -7,7 +7,7 @@ import {
   SpeakTextResponse,
 } from "@workspace/api-zod";
 import { getUpliftClient, DEFAULT_VOICE_ID } from "../lib/uplift";
-import { extractIntent } from "../lib/llm";
+import { extractIntent, IntentValidationError } from "../lib/llm";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -19,7 +19,7 @@ const router: IRouter = Router();
 router.post("/transcribe", upload.single("audio"), async (req, res) => {
   const file = req.file;
   if (!file || file.size === 0) {
-    res.status(400).json({ error: "Missing audio file (field name 'audio')" });
+    res.status(400).json({ error: "آواز موصول نہیں ہوئی، دوبارہ کوشش کریں۔" });
     return;
   }
   try {
@@ -30,23 +30,25 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
         : "recording.m4a";
     const { transcript } = await client.stt.transcribe({
       file: file.buffer,
-      fileName,
+      fileName, // required for format detection when passing a Buffer
+      model: "scribe",
       language: "ur",
     });
+    if (!transcript || !transcript.trim()) {
+      res.status(502).json({ error: "آواز سمجھ نہیں آئی، دوبارہ کوشش کریں۔" });
+      return;
+    }
     res.json(TranscribeAudioResponse.parse({ text: transcript }));
   } catch (err) {
     req.log.error({ err }, "Speech-to-text failed");
-    res.status(502).json({
-      error:
-        "Speech-to-text failed. The Uplift AI STT service is in beta — please try again.",
-    });
+    res.status(502).json({ error: "آواز سمجھ نہیں آئی، دوبارہ کوشش کریں۔" });
   }
 });
 
 router.post("/extract", async (req, res) => {
   const body = ExtractIntentBody.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Request must include non-empty 'text'" });
+    res.status(400).json({ error: "میں آپ کی بات سمجھ نہیں سکا۔ دوبارہ بولیں۔" });
     return;
   }
   try {
@@ -54,34 +56,38 @@ router.post("/extract", async (req, res) => {
     res.json(intent);
   } catch (err) {
     req.log.error({ err }, "Intent extraction failed");
-    const message =
-      err instanceof Error ? err.message : "Intent extraction failed";
-    res.status(502).json({ error: message });
+    if (err instanceof IntentValidationError) {
+      res
+        .status(502)
+        .json({ error: "میں آپ کی بات سمجھ نہیں سکا۔ دوبارہ بولیں۔" });
+      return;
+    }
+    res.status(502).json({ error: "میں آپ کی بات سمجھ نہیں سکا۔ دوبارہ بولیں۔" });
   }
 });
 
 router.post("/speak", async (req, res) => {
   const body = SpeakTextBody.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Request must include non-empty 'text'" });
+    res.status(400).json({ error: "بولنے کے لیے کوئی جملہ نہیں ملا۔" });
     return;
   }
   try {
     const client = getUpliftClient();
-    const { audio } = await client.tts.create({
+    const { audio, metadata } = await client.tts.create({
       text: body.data.text,
       voiceId: DEFAULT_VOICE_ID,
       outputFormat: "MP3_22050_128",
     });
     res.json(
       SpeakTextResponse.parse({
-        audioBase64: audio.toString("base64"),
-        mimeType: "audio/mpeg",
+        audio: audio.toString("base64"),
+        contentType: metadata?.contentType ?? "audio/mpeg",
       }),
     );
   } catch (err) {
     req.log.error({ err }, "Text-to-speech failed");
-    res.status(502).json({ error: "Text-to-speech failed. Please try again." });
+    res.status(502).json({ error: "جواب نہیں بن سکا، دوبارہ کوشش کریں۔" });
   }
 });
 

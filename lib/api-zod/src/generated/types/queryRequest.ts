@@ -5,16 +5,15 @@
  * Voice-first Urdu personal finance assistant backend (Uplift AI STT/TTS + LLM intent extraction + finance engine).
  * OpenAPI spec version: 2.0.0
  */
-import type { TransactionInputType } from './transactionInputType';
+import type { QueryRequestPeriod } from './queryRequestPeriod';
+import type { QueryRequestQueryType } from './queryRequestQueryType';
 
-export interface TransactionInput {
-  /** Rupee amount (positive) */
-  amount: number;
-  type: TransactionInputType;
+export interface QueryRequest {
+  query_type: QueryRequestQueryType;
+  /** @nullable */
+  period?: QueryRequestPeriod;
   /** @nullable */
   person?: string | null;
   /** @nullable */
   category?: string | null;
-  /** @nullable */
-  description?: string | null;
 }

@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,23 +13,57 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
-  useListCustomers,
-  getListCustomersQueryKey,
+  useListTransactions,
+  getListTransactionsQueryKey,
+  type Transaction,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { TransactionRow } from '@/components/TransactionRow';
+
+interface PersonBalance {
+  person: string;
+  balance: number;
+}
+
+function peopleFrom(transactions: Transaction[]): PersonBalance[] {
+  const map = new Map<string, { person: string; given: number; received: number }>();
+  for (const t of transactions) {
+    if (!t.person || (t.type !== 'given' && t.type !== 'received')) continue;
+    const key = t.person.trim().toLowerCase();
+    let entry = map.get(key);
+    if (!entry) {
+      entry = { person: t.person.trim(), given: 0, received: 0 };
+      map.set(key, entry);
+    }
+    if (t.type === 'given') entry.given += t.amount;
+    else entry.received += t.amount;
+  }
+  return [...map.values()]
+    .map((e) => ({ person: e.person, balance: e.given - e.received }))
+    .sort((a, b) => b.balance - a.balance);
+}
 
 export default function LedgerScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const query = useListCustomers({
-    query: { queryKey: getListCustomersQueryKey() },
+  const query = useListTransactions({
+    query: { queryKey: getListTransactionsQueryKey() },
   });
+  const transactions = query.data?.transactions ?? [];
+  const summary = query.data?.summary;
+  const people = useMemo(() => peopleFrom(transactions), [transactions]);
 
-  const customers = query.data?.customers ?? [];
   const webTop = Platform.OS === 'web' ? 67 : 0;
   const webBottom = Platform.OS === 'web' ? 34 : 0;
+
+  const summaryBlocks = [
+    { label: 'آمدن', value: summary?.income ?? 0, color: colors.success },
+    { label: 'خرچ', value: summary?.expenses ?? 0, color: colors.destructive },
+    { label: 'لوگوں کو دیے', value: summary?.given ?? 0, color: colors.foreground },
+    { label: 'واپس آئے', value: summary?.received ?? 0, color: colors.foreground },
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -49,7 +83,7 @@ export default function LedgerScreen() {
         >
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </Pressable>
-        <Text style={[styles.title, { color: colors.foreground }]}>کھاتہ</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>میرا کھاتہ</Text>
         <View style={styles.backButtonPlaceholder} />
       </View>
 
@@ -75,18 +109,8 @@ export default function LedgerScreen() {
             </Text>
           </Pressable>
         </View>
-      ) : customers.length === 0 ? (
-        <View style={styles.centerFill}>
-          <Feather name="book-open" size={28} color={colors.mutedForeground} />
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-            ابھی کھاتہ خالی ہے{'\n'}مائیک دبا کر پہلا ادھار لکھیں
-          </Text>
-        </View>
       ) : (
-        <FlatList
-          data={customers}
-          keyExtractor={(item) => item.customer}
-          scrollEnabled={customers.length > 0}
+        <ScrollView
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingBottom: insets.bottom + webBottom + 24,
@@ -98,43 +122,71 @@ export default function LedgerScreen() {
               tintColor={colors.primary}
             />
           }
-          renderItem={({ item }) => {
-            const owes = item.balance > 0;
-            return (
-              <View style={[styles.row, { borderColor: colors.border }]}>
-                <View style={styles.nameWrap}>
+        >
+          <View style={styles.summaryGrid}>
+            {summaryBlocks.map((block) => (
+              <View
+                key={block.label}
+                style={[
+                  styles.summaryCell,
+                  { borderColor: colors.border, backgroundColor: colors.card },
+                ]}
+              >
+                <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
+                  {block.label}
+                </Text>
+                <Text style={[styles.summaryValue, { color: block.color }]}>
+                  Rs. {block.value.toLocaleString('en-PK')}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {people.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                لوگوں کا حساب
+              </Text>
+              {people.map((p) => (
+                <View
+                  key={p.person}
+                  style={[styles.personRow, { borderColor: colors.border }]}
+                >
                   <Text
-                    style={[styles.name, { color: colors.foreground }]}
+                    style={[styles.personName, { color: colors.foreground }]}
                     numberOfLines={1}
                   >
-                    {item.customer}
-                  </Text>
-                  <Text style={[styles.count, { color: colors.mutedForeground }]}>
-                    {item.transactions.length} اندراج
-                  </Text>
-                </View>
-                <View style={styles.balanceWrap}>
-                  <Text
-                    style={[
-                      styles.balance,
-                      { color: owes ? colors.destructive : colors.success },
-                    ]}
-                  >
-                    {Math.abs(item.balance).toLocaleString('en-PK')}
+                    {p.person}
                   </Text>
                   <Text
                     style={[
-                      styles.balanceLabel,
-                      { color: owes ? colors.destructive : colors.success },
+                      styles.personBalance,
+                      { color: p.balance > 0 ? colors.destructive : colors.success },
                     ]}
                   >
-                    {owes ? 'بقایا' : 'برابر'}
+                    Rs. {Math.abs(p.balance).toLocaleString('en-PK')}
                   </Text>
                 </View>
+              ))}
+            </View>
+          ) : null}
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              تمام لین دین
+            </Text>
+            {transactions.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Feather name="book-open" size={26} color={colors.mutedForeground} />
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                  ابھی کھاتہ خالی ہے{'\n'}مائیک دبا کر پہلا اندراج کریں
+                </Text>
               </View>
-            );
-          }}
-        />
+            ) : (
+              transactions.map((t) => <TransactionRow key={t.id} transaction={t} />)
+            )}
+          </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -175,6 +227,67 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 32,
   },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 8,
+  },
+  summaryCell: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 4,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    writingDirection: 'rtl',
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    marginBottom: 8,
+  },
+  personRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    paddingVertical: 14,
+    gap: 16,
+    minHeight: 56,
+  },
+  personName: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '600',
+    writingDirection: 'rtl',
+    textAlign: 'left',
+  },
+  personBalance: {
+    fontSize: 17,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 28,
+  },
   emptyText: {
     fontSize: 15,
     textAlign: 'center',
@@ -192,43 +305,6 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 15,
     fontWeight: '600',
-    writingDirection: 'rtl',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    paddingVertical: 18,
-    gap: 16,
-    minHeight: 72,
-  },
-  nameWrap: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: '600',
-    writingDirection: 'rtl',
-    textAlign: 'left',
-  },
-  count: {
-    fontSize: 13,
-    marginTop: 3,
-    writingDirection: 'rtl',
-    textAlign: 'left',
-  },
-  balanceWrap: {
-    alignItems: 'flex-end',
-  },
-  balance: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
-  },
-  balanceLabel: {
-    fontSize: 12,
-    marginTop: 2,
     writingDirection: 'rtl',
   },
 });

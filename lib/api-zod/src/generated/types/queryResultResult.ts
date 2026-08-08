@@ -6,7 +6,7 @@
  * OpenAPI spec version: 2.0.0
  */
 
-export interface SpeakRequest {
-  /** @minLength 1 */
-  text: string;
-}
+/**
+ * Raw calculation result from the finance engine
+ */
+export type QueryResultResult = { [key: string]: unknown };

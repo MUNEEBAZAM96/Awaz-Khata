@@ -9,12 +9,12 @@
 /**
  * @nullable
  */
-export type ExtractResultType = typeof ExtractResultType[keyof typeof ExtractResultType] | null;
+export type ExtractResultPeriod = typeof ExtractResultPeriod[keyof typeof ExtractResultPeriod] | null;
 
 
-export const ExtractResultType = {
-  expense: 'expense',
-  income: 'income',
-  given: 'given',
-  received: 'received',
+export const ExtractResultPeriod = {
+  today: 'today',
+  this_week: 'this_week',
+  this_month: 'this_month',
+  all_time: 'all_time',
 } as const;
