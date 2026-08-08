@@ -1,0 +1,95 @@
+Build a two-part project called "Awaz Khata" — a voice-first ledger app for Pakistani shopkeepers to record and check customer credit (udhaar) entirely by speaking in Urdu.
+
+PROJECT STRUCTURE
+Create two top-level folders:
+- /frontend — Expo (React Native) app
+- /backend — Node.js + Express API
+
+============================================================
+BACKEND (/backend)
+============================================================
+Stack: Node.js, Express, @upliftai/sdk-js, multer (file uploads), dotenv, cors, uuid.
+Storage: a local JSON file at /backend/data/transactions.json — no database.
+
+Environment variables (.env, create a .env.example with blank values, never commit real keys):
+- UPLIFTAI_API_KEY
+- LLM_API_KEY
+- LLM_PROVIDER (e.g. "groq" or "openai")
+- PORT=3001
+
+Data model for each transaction record:
+{
+  "id": "uuid",
+  "customer": "string",
+  "amount": number,
+  "type": "credit" | "payment",
+  "item": "string or null",
+  "timestamp": "ISO 8601 string"
+}
+
+Routes to build:
+
+1. POST /api/transcribe
+   - Accepts multipart/form-data audio upload (field name "audio")
+   - Calls Uplift AI's Speech-to-Text via the SDK (client.stt — it's in beta, so wrap the call in a try/catch with a clear error message if it fails)
+   - Returns { text: "transcribed string" }
+
+2. POST /api/extract
+   - Accepts { text: string }
+   - Calls the configured LLM (provider chosen by LLM_PROVIDER env var) with a system prompt instructing it to ALWAYS return strict JSON in one of these two shapes and nothing else:
+     Transaction: { "mode": "transaction", "customer": "name", "amount": number, "type": "credit"|"payment", "item": "string or null" }
+     Query: { "mode": "query", "customer": "name" }
+   - Parse and validate the LLM's JSON response before returning it. If parsing fails, return a clear error.
+
+3. POST /api/transactions
+   - Accepts a transaction object (customer, amount, type, item)
+   - Appends it with a generated uuid and current timestamp to /backend/data/transactions.json
+   - Returns the saved record
+
+4. GET /api/transactions
+   - Returns all customers with their running balance (sum of credits minus payments) and their transaction history
+
+5. GET /api/transactions/:customer
+   - Returns balance and full transaction history for one specific customer (case-insensitive match)
+
+6. POST /api/speak
+   - Accepts { text: string }
+   - Calls Uplift AI's client.tts.create() with a configurable voiceId (default to a clear, natural Urdu voice) and outputFormat "MP3_22050_128"
+   - Returns the audio as a base64 string or streams it back as audio/mpeg
+
+Add basic request validation and consistent JSON error responses ({ error: "message" }) across all routes. Enable CORS for all origins during development.
+
+============================================================
+FRONTEND (/frontend)
+============================================================
+Stack: Expo (managed workflow), React Native, NativeWind (Tailwind for RN), expo-av for audio recording and playback, axios for API calls.
+
+Only two screens — keep this minimal, no navigation library needed if a simple state toggle can switch between them:
+
+SCREEN 1 — MainVoiceScreen (default screen)
+- App title at top ("آواز کھاتہ")
+- A status label that reflects one of four states: idle, listening, processing, speaking
+- One large circular mic button, centered, that:
+  - On tap: starts recording with expo-av (use RecordingOptionsPresets.HIGH_QUALITY for consistent .m4a output), sets state to "listening"
+  - On tap again (or after silence, if you can implement basic silence detection): stops recording, sets state to "processing", uploads the audio file to POST /api/transcribe
+  - Then sends the returned text to POST /api/extract
+  - If mode is "transaction": POST the parsed data to /api/transactions to save it, then build a short Urdu confirmation sentence from the result (e.g. "{amount} روپے {customer} کے کھاتے میں لکھ دیے")
+  - If mode is "query": GET /api/transactions/:customer, build a short spoken answer with their balance
+  - Send that confirmation/answer text to POST /api/speak, play the returned audio with expo-av's Sound object, set state to "speaking", then back to "idle" when playback ends
+- Below the mic button: a short scrollable list of the last 3-5 activity entries (customer, amount, type) with a checkmark icon once confirmed
+- A button at the bottom: "پورا کھاتہ دیکھیں" that switches to Screen 2
+
+SCREEN 2 — LedgerScreen
+- Back arrow at top-left to return to Screen 1
+- Title "کھاتہ"
+- A scrollable list of all customers (from GET /api/transactions), each row showing name on the left and balance on the right — red text if they owe money, green if settled — using bordered rows, not cards
+
+Style everything with NativeWind classes: flat design, high contrast, large tap targets (at least 44px), generous spacing, and right-to-left friendly text alignment for the Urdu content.
+
+Set up an api.js service file in /frontend/services that wraps all axios calls to the backend (base URL should be an easily-changeable constant, since the backend URL will point to the Replit-hosted backend).
+
+============================================================
+IMPORTANT
+============================================================
+- Do NOT hardcode any API keys anywhere in the code. All keys are read from backend environment variables only. The frontend never talks to Uplift AI directly — it only ever calls our own backend.
+- Keep the whole thing as simple and reliable as possible — this is for a live hackathon demo, not a production app. Favor working over polished.
