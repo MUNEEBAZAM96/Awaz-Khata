@@ -177,6 +177,20 @@ const PERIOD_PHRASE: Record<Period, string> = {
   all_time: "اب تک",
 };
 
+// Conversational query acknowledgements — queries should sound like the
+// assistant is actively checking the ledger («جی، میں حساب چیک کرتا ہوں۔»)
+// rather than reading a bare number. Deterministic, never LLM-generated.
+const ACK_PERSON = (person: string) =>
+  `جی، میں ${person} کا حساب چیک کرتا ہوں۔`;
+const ACK_CATEGORY = (category: string) =>
+  `جی، میں ${category} کا حساب دیکھتا ہوں۔`;
+const ACK_FOR_PERIOD: Record<Period, string> = {
+  today: "جی، میں نے آج کا حساب چیک کیا ہے۔",
+  this_week: "جی، میں نے اس ہفتے کا حساب چیک کیا ہے۔",
+  this_month: "جی، میں نے اس مہینے کا حساب چیک کیا ہے۔",
+  all_time: "جی، میں نے حساب چیک کیا ہے۔",
+};
+
 export function confirmationFor(t: {
   amount: number;
   type: TransactionType;
@@ -289,8 +303,8 @@ export function runFinanceQuery(
         result: { period, total },
         responseText:
           period === "all_time"
-            ? `آپ نے اب تک ${rupees(total)} خرچ کیے ہیں۔`
-            : `آپ نے ${phrase} ${rupees(total)} خرچ کیے ہیں۔`,
+            ? `${ACK_FOR_PERIOD[period]} آپ نے اب تک ${rupees(total)} خرچ کیے ہیں۔`
+            : `${ACK_FOR_PERIOD[period]} آپ نے ${phrase} ${rupees(total)} خرچ کیے ہیں۔`,
       };
     }
 
@@ -298,7 +312,7 @@ export function runFinanceQuery(
       const total = summarize(scoped).income;
       return {
         result: { period, total },
-        responseText: `${phrase} آپ کی آمدن ${rupees(total)} ہے۔`,
+        responseText: `${ACK_FOR_PERIOD[period]} ${phrase} آپ کی آمدن ${rupees(total)} ہے۔`,
       };
     }
 
@@ -318,7 +332,7 @@ export function runFinanceQuery(
       }
       return {
         result: { person: stats.person, given: stats.given },
-        responseText: `آپ نے ${stats.person} کو کل ${rupees(stats.given)} دیے ہیں۔`,
+        responseText: `${ACK_PERSON(stats.person)} آپ نے ${stats.person} کو کل ${rupees(stats.given)} دیے ہیں۔`,
       };
     }
 
@@ -338,7 +352,7 @@ export function runFinanceQuery(
       }
       return {
         result: { person: stats.person, received: stats.received },
-        responseText: `${stats.person} سے آپ کو کل ${rupees(stats.received)} واپس ملے ہیں۔`,
+        responseText: `${ACK_PERSON(stats.person)} ${stats.person} سے آپ کو کل ${rupees(stats.received)} واپس ملے ہیں۔`,
       };
     }
 
@@ -357,15 +371,18 @@ export function runFinanceQuery(
         };
       }
       const { person, given, received, balance } = stats;
-      let responseText: string;
+      let answer: string;
       if (balance > 0) {
-        responseText = `${person} کے ذمے ابھی ${rupees(balance)} ہیں۔`;
+        answer = `${person} کے ذمے ابھی ${rupees(balance)} ہیں۔`;
       } else if (balance === 0) {
-        responseText = `${person} کا حساب برابر ہے۔`;
+        answer = `${person} کا حساب برابر ہے۔`;
       } else {
-        responseText = `آپ کے ذمے ${person} کے ${rupees(Math.abs(balance))} ہیں۔`;
+        answer = `آپ کے ذمے ${person} کے ${rupees(Math.abs(balance))} ہیں۔`;
       }
-      return { result: { person, given, received, balance }, responseText };
+      return {
+        result: { person, given, received, balance },
+        responseText: `${ACK_PERSON(person)} ${answer}`,
+      };
     }
 
     case "today_summary": {
@@ -373,7 +390,7 @@ export function runFinanceQuery(
       const totals = summarize(todays);
       return {
         result: { period: "today", ...totals },
-        responseText: `آج آپ نے ${rupees(totals.expenses)} خرچ کیے اور آمدن ${rupees(totals.income)} رہی۔`,
+        responseText: `${ACK_FOR_PERIOD.today} آج آپ نے ${rupees(totals.expenses)} خرچ کیے اور آمدن ${rupees(totals.income)} رہی۔`,
       };
     }
 
@@ -382,7 +399,7 @@ export function runFinanceQuery(
       const totals = summarize(monthly);
       return {
         result: { period: "this_month", ...totals },
-        responseText: `اس مہینے آپ نے ${rupees(totals.expenses)} خرچ کیے اور آمدن ${rupees(totals.income)} رہی۔`,
+        responseText: `${ACK_FOR_PERIOD.this_month} اس مہینے آپ نے ${rupees(totals.expenses)} خرچ کیے اور آمدن ${rupees(totals.income)} رہی۔`,
       };
     }
 
@@ -391,12 +408,13 @@ export function runFinanceQuery(
       if (query.category) {
         const key = query.category.trim().toLowerCase();
         const total = totals.get(key) ?? 0;
+        const ack = ACK_CATEGORY(query.category);
         return {
           result: { period, category: query.category, total },
           responseText:
             total > 0
-              ? `${phrase} ${query.category} پر ${rupees(total)} خرچ ہوئے ہیں۔`
-              : `${phrase} ${query.category} پر کوئی خرچہ نہیں ملا۔`,
+              ? `${ack} ${phrase} ${query.category} پر ${rupees(total)} خرچ ہوئے ہیں۔`
+              : `${ack} ${phrase} ${query.category} پر کوئی خرچہ نہیں ملا۔`,
         };
       }
       let topCategory: string | null = null;
@@ -410,7 +428,7 @@ export function runFinanceQuery(
       if (!topCategory) {
         return {
           result: { period, categories: {} },
-          responseText: `${phrase} کوئی خرچہ نہیں ملا۔`,
+          responseText: `${ACK_FOR_PERIOD[period]} ${phrase} کوئی خرچہ نہیں ملا۔`,
         };
       }
       return {
@@ -420,7 +438,7 @@ export function runFinanceQuery(
           topAmount,
           categories: Object.fromEntries(totals),
         },
-        responseText: `${phrase} سب سے زیادہ خرچ ${topCategory} پر ہوا، ${rupees(topAmount)}۔`,
+        responseText: `${ACK_FOR_PERIOD[period]} ${phrase} سب سے زیادہ خرچ ${topCategory} پر ہوا، ${rupees(topAmount)}۔`,
       };
     }
 
@@ -432,8 +450,8 @@ export function runFinanceQuery(
         result: { transactions: recent },
         responseText:
           recent.length === 0
-            ? "ابھی کوئی اندراج نہیں ہے۔"
-            : `آپ کے آخری ${recent.length} اندراج اسکرین پر موجود ہیں۔`,
+            ? `${ACK_FOR_PERIOD[period]} ابھی کوئی اندراج نہیں ہے۔`
+            : `${ACK_FOR_PERIOD[period]} آپ کے آخری ${recent.length} اندراج اسکرین پر موجود ہیں۔`,
       };
     }
   }

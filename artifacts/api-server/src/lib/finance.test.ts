@@ -227,10 +227,20 @@ describe("runFinanceQuery", () => {
     tx({ amount: 400, type: "received", person: "علی", timestamp: "2026-08-06T07:00:00.000Z" }),
   ];
 
+  // Query responses lead with a conversational "checking" acknowledgement
+  // (product spec: «جی، میں حساب چیک کرتا ہوں۔ …» + finance-engine result).
+  const ACK_ALL_TIME = "جی، میں نے حساب چیک کیا ہے۔";
+  const ACK_THIS_MONTH = "جی، میں نے اس مہینے کا حساب چیک کیا ہے۔";
+  const ACK_TODAY = "جی، میں نے آج کا حساب چیک کیا ہے۔";
+  const ackPerson = (person: string) =>
+    `جی، میں ${person} کا حساب چیک کرتا ہوں۔`;
+
   it("total_expenses all_time", () => {
     const out = runFinanceQuery(records, { query_type: "total_expenses" });
     expect(out.result).toEqual({ period: "all_time", total: 1400 });
-    expect(out.responseText).toBe("آپ نے اب تک 1400 روپے خرچ کیے ہیں۔");
+    expect(out.responseText).toBe(
+      `${ACK_ALL_TIME} آپ نے اب تک 1400 روپے خرچ کیے ہیں۔`,
+    );
   });
 
   it("total_expenses with period phrase", () => {
@@ -238,7 +248,9 @@ describe("runFinanceQuery", () => {
       query_type: "total_expenses",
       period: "this_month",
     });
-    expect(out.responseText).toBe("آپ نے اس مہینے 1400 روپے خرچ کیے ہیں۔");
+    expect(out.responseText).toBe(
+      `${ACK_THIS_MONTH} آپ نے اس مہینے 1400 روپے خرچ کیے ہیں۔`,
+    );
   });
 
   it("total_income", () => {
@@ -247,7 +259,9 @@ describe("runFinanceQuery", () => {
       period: "this_month",
     });
     expect(out.result).toEqual({ period: "this_month", total: 5000 });
-    expect(out.responseText).toBe("اس مہینے آپ کی آمدن 5000 روپے ہے۔");
+    expect(out.responseText).toBe(
+      `${ACK_THIS_MONTH} اس مہینے آپ کی آمدن 5000 روپے ہے۔`,
+    );
   });
 
   it("person_given", () => {
@@ -256,7 +270,9 @@ describe("runFinanceQuery", () => {
       person: "علی",
     });
     expect(out.result).toEqual({ person: "علی", given: 1000 });
-    expect(out.responseText).toBe("آپ نے علی کو کل 1000 روپے دیے ہیں۔");
+    expect(out.responseText).toBe(
+      `${ackPerson("علی")} آپ نے علی کو کل 1000 روپے دیے ہیں۔`,
+    );
   });
 
   it("person_received", () => {
@@ -264,7 +280,9 @@ describe("runFinanceQuery", () => {
       query_type: "person_received",
       person: "علی",
     });
-    expect(out.responseText).toBe("علی سے آپ کو کل 400 روپے واپس ملے ہیں۔");
+    expect(out.responseText).toBe(
+      `${ackPerson("علی")} علی سے آپ کو کل 400 روپے واپس ملے ہیں۔`,
+    );
   });
 
   it("person_balance positive (they owe you)", () => {
@@ -273,7 +291,9 @@ describe("runFinanceQuery", () => {
       person: "علی",
     });
     expect(out.result).toMatchObject({ balance: 600 });
-    expect(out.responseText).toBe("علی کے ذمے ابھی 600 روپے ہیں۔");
+    expect(out.responseText).toBe(
+      `${ackPerson("علی")} علی کے ذمے ابھی 600 روپے ہیں۔`,
+    );
   });
 
   it("person_balance zero", () => {
@@ -285,7 +305,9 @@ describe("runFinanceQuery", () => {
       query_type: "person_balance",
       person: "احمد",
     });
-    expect(out.responseText).toBe("احمد کا حساب برابر ہے۔");
+    expect(out.responseText).toBe(
+      `${ackPerson("احمد")} احمد کا حساب برابر ہے۔`,
+    );
   });
 
   it("person_balance negative (you owe them)", () => {
@@ -297,7 +319,9 @@ describe("runFinanceQuery", () => {
       query_type: "person_balance",
       person: "احمد",
     });
-    expect(out.responseText).toBe("آپ کے ذمے احمد کے 250 روپے ہیں۔");
+    expect(out.responseText).toBe(
+      `${ackPerson("احمد")} آپ کے ذمے احمد کے 250 روپے ہیں۔`,
+    );
   });
 
   it("person queries without a name ask to repeat", () => {
@@ -321,7 +345,9 @@ describe("runFinanceQuery", () => {
       category: "کھانا",
     });
     expect(out.result).toMatchObject({ total: 1300 });
-    expect(out.responseText).toBe("اب تک کھانا پر 1300 روپے خرچ ہوئے ہیں۔");
+    expect(out.responseText).toBe(
+      "جی، میں کھانا کا حساب دیکھتا ہوں۔ اب تک کھانا پر 1300 روپے خرچ ہوئے ہیں۔",
+    );
   });
 
   it("category_summary for a category with no spend", () => {
@@ -329,20 +355,22 @@ describe("runFinanceQuery", () => {
       query_type: "category_summary",
       category: "سفر",
     });
-    expect(out.responseText).toBe("اب تک سفر پر کوئی خرچہ نہیں ملا۔");
+    expect(out.responseText).toBe(
+      "جی، میں سفر کا حساب دیکھتا ہوں۔ اب تک سفر پر کوئی خرچہ نہیں ملا۔",
+    );
   });
 
   it("category_summary without category names the top category", () => {
     const out = runFinanceQuery(records, { query_type: "category_summary" });
     expect(out.result).toMatchObject({ topCategory: "کھانا", topAmount: 1300 });
     expect(out.responseText).toBe(
-      "اب تک سب سے زیادہ خرچ کھانا پر ہوا، 1300 روپے۔",
+      `${ACK_ALL_TIME} اب تک سب سے زیادہ خرچ کھانا پر ہوا، 1300 روپے۔`,
     );
   });
 
   it("category_summary with no expenses at all", () => {
     const out = runFinanceQuery([], { query_type: "category_summary" });
-    expect(out.responseText).toBe("اب تک کوئی خرچہ نہیں ملا۔");
+    expect(out.responseText).toBe(`${ACK_ALL_TIME} اب تک کوئی خرچہ نہیں ملا۔`);
   });
 
   it("recent_transactions caps at 5, newest first", () => {
@@ -357,12 +385,14 @@ describe("runFinanceQuery", () => {
     const txs = out.result.transactions as TransactionRecord[];
     expect(txs).toHaveLength(5);
     expect(txs[0].amount).toBe(7);
-    expect(out.responseText).toBe("آپ کے آخری 5 اندراج اسکرین پر موجود ہیں۔");
+    expect(out.responseText).toBe(
+      `${ACK_ALL_TIME} آپ کے آخری 5 اندراج اسکرین پر موجود ہیں۔`,
+    );
   });
 
   it("recent_transactions with empty ledger", () => {
     const out = runFinanceQuery([], { query_type: "recent_transactions" });
-    expect(out.responseText).toBe("ابھی کوئی اندراج نہیں ہے۔");
+    expect(out.responseText).toBe(`${ACK_ALL_TIME} ابھی کوئی اندراج نہیں ہے۔`);
   });
 
   describe("summaries (system time pinned to NOW)", () => {
@@ -396,7 +426,7 @@ describe("runFinanceQuery", () => {
         received: 0,
       });
       expect(out.responseText).toBe(
-        "آج آپ نے 500 روپے خرچ کیے اور آمدن 5000 روپے رہی۔",
+        `${ACK_TODAY} آج آپ نے 500 روپے خرچ کیے اور آمدن 5000 روپے رہی۔`,
       );
     });
 
@@ -410,7 +440,7 @@ describe("runFinanceQuery", () => {
         received: 400,
       });
       expect(out.responseText).toBe(
-        "اس مہینے آپ نے 1650 روپے خرچ کیے اور آمدن 5000 روپے رہی۔",
+        `${ACK_THIS_MONTH} اس مہینے آپ نے 1650 روپے خرچ کیے اور آمدن 5000 روپے رہی۔`,
       );
     });
 
@@ -420,7 +450,9 @@ describe("runFinanceQuery", () => {
         period: "today",
       });
       expect(out.result).toEqual({ period: "today", total: 500 });
-      expect(out.responseText).toBe("آپ نے آج 500 روپے خرچ کیے ہیں۔");
+      expect(out.responseText).toBe(
+        `${ACK_TODAY} آپ نے آج 500 روپے خرچ کیے ہیں۔`,
+      );
     });
   });
 });

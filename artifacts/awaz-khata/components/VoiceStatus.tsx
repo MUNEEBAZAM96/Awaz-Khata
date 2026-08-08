@@ -12,8 +12,14 @@ import type { VoiceState } from '@/hooks/useVoiceAssistant';
 const STATUS_LABELS: Record<VoiceState, string> = {
   idle: 'بولنے کے لیے دبائیں',
   listening: 'سن رہا ہوں...',
-  processing: 'سمجھ رہا ہوں...',
-  speaking: 'جواب دے رہا ہوں...',
+  processing: 'آپ کی بات سمجھ رہا ہوں...',
+  speaking: 'آپ کو جواب دے رہا ہوں...',
+};
+
+// Softer secondary lines that make the assistant feel attentive.
+const SECONDARY_LABELS: Partial<Record<VoiceState, string>> = {
+  idle: 'اپنے پیسوں کے بارے میں بتائیں یا پوچھیں',
+  listening: 'آپ بول سکتے ہیں',
 };
 
 interface Props {
@@ -65,13 +71,24 @@ export function VoiceStatus({ state, transcript, reply, error }: Props) {
         </View>
       ) : null}
 
-      {showTranscript ? (
-        <Text
-          style={[styles.transcript, { color: colors.mutedForeground }]}
-          numberOfLines={2}
-        >
-          «{transcript}»
+      {showLabel && SECONDARY_LABELS[state] && !transcript && !error ? (
+        <Text style={[styles.secondary, { color: colors.mutedForeground }]}>
+          {SECONDARY_LABELS[state]}
         </Text>
+      ) : null}
+
+      {showTranscript ? (
+        <View style={styles.transcriptWrap}>
+          <Text style={[styles.transcriptCaption, { color: colors.mutedForeground }]}>
+            آپ نے کہا
+          </Text>
+          <Text
+            style={[styles.transcript, { color: colors.foreground }]}
+            numberOfLines={2}
+          >
+            «{transcript}»
+          </Text>
+        </View>
       ) : null}
 
       {showReply ? (
@@ -117,6 +134,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: urduLine(15),
     writingDirection: 'rtl',
+  },
+  secondary: {
+    fontSize: 12,
+    lineHeight: urduLine(12),
+    fontFamily: fonts.urdu,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  transcriptWrap: {
+    alignItems: 'center',
+    gap: 0,
+  },
+  transcriptCaption: {
+    fontSize: 11,
+    lineHeight: urduLine(11),
+    fontFamily: fonts.urdu,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    opacity: 0.8,
   },
   transcript: {
     fontSize: 13,

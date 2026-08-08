@@ -13,13 +13,15 @@ import { fonts, urduLine } from '@/constants/typography';
 import { useVoiceAssistant } from '@/hooks/useVoiceAssistant';
 import { VoiceButton } from '@/components/VoiceButton';
 import { VoiceStatus } from '@/components/VoiceStatus';
+import { ConversationHistory } from '@/components/ConversationHistory';
 import { SummaryHeader } from '@/components/SummaryHeader';
 import { ActivityList } from '@/components/ActivityList';
 
 export default function MainVoiceScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { state, transcript, reply, error, toggle, cancel } = useVoiceAssistant();
+  const { state, transcript, reply, error, interactions, toggle, cancel } =
+    useVoiceAssistant();
 
   // Switching tabs mid-recording/mid-speech must never leave the mic or
   // voice running — abandon both on blur.
@@ -85,6 +87,8 @@ export default function MainVoiceScreen() {
             error={error}
           />
         </View>
+
+        <ConversationHistory interactions={interactions} />
 
         <View style={styles.activitySection}>
           <ActivityList transactions={transactions} />

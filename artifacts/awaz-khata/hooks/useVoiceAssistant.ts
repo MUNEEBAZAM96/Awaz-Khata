@@ -23,6 +23,17 @@ import { playBase64Audio, stopPlayback } from '@/lib/audio';
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
+/** One completed voice exchange kept in session memory (no persistence, per spec). */
+export interface VoiceInteraction {
+  id: string;
+  userText: string;
+  assistantText: string;
+  timestamp: string;
+}
+
+/** Session conversation window — last few exchanges only, by design. */
+const MAX_INTERACTIONS = 5;
+
 const UNKNOWN_MESSAGE = 'میں آپ کی بات سمجھ نہیں سکا۔ دوبارہ بولیں۔';
 const GENERIC_ERROR = 'کچھ غلط ہو گیا، دوبارہ کوشش کریں۔';
 const NETWORK_ERROR = 'سرور سے رابطہ نہیں ہو سکا۔';
@@ -51,9 +62,14 @@ export function useVoiceAssistant() {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [interactions, setInteractions] = useState<VoiceInteraction[]>([]);
   const busyRef = useRef(false);
   const stateRef = useRef<VoiceState>('idle');
   stateRef.current = state;
+  // Generation token: cancel() bumps it, invalidating any in-flight pipeline
+  // run so a blurred screen can never save a transaction, start speech, or
+  // mutate UI state afterwards.
+  const generationRef = useRef(0);
 
   useEffect(() => {
     AudioModule.requestRecordingPermissionsAsync().catch(() => undefined);
@@ -65,40 +81,86 @@ export function useVoiceAssistant() {
    * a useFocusEffect dependency.
    */
   const cancel = useCallback(async () => {
+    generationRef.current += 1;
     if (stateRef.current === 'listening') {
       try {
         await recorder.stop();
       } catch {
         // recorder already stopped
       }
-      setState('idle');
     }
     stopPlayback();
+    setState('idle');
   }, [recorder]);
 
-  /** Show + speak a sentence aloud; never throws, always lands back on idle. */
-  const speakAndFinish = useCallback(async (text: string) => {
-    setReply(text);
-    try {
-      const speech = await speakText({ text });
-      setState('speaking');
-      await playBase64Audio(speech.audio);
-    } catch {
-      // TTS failure is non-fatal — the text is already visible on screen
-    } finally {
-      setState('idle');
-    }
+  /** Append a completed exchange to the session history (capped window). */
+  const appendInteraction = useCallback((userText: string, assistantText: string) => {
+    const now = new Date();
+    setInteractions((prev) =>
+      [
+        ...prev,
+        {
+          id: `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
+          userText,
+          assistantText,
+          timestamp: now.toISOString(),
+        },
+      ].slice(-MAX_INTERACTIONS),
+    );
   }, []);
+
+  /**
+   * Show + speak a sentence aloud; never throws, always lands back on idle.
+   * When `userText` is provided the exchange is a successful interaction:
+   * after playback it moves into the session conversation history and the
+   * live transcript/reply slots clear so the history is the single record.
+   * `active` reports whether this pipeline run is still current — once it
+   * returns false (screen blurred / cancelled) no speech starts and no UI
+   * state is touched, except the history append which records what happened.
+   */
+  const speakAndFinish = useCallback(
+    async (text: string, userText?: string, active: () => boolean = () => true) => {
+      setReply(text);
+      try {
+        const speech = await speakText({ text });
+        if (!active()) return;
+        setState('speaking');
+        await playBase64Audio(speech.audio);
+      } catch {
+        // TTS failure is non-fatal — the text is already visible on screen
+        // and any saved transaction stays saved.
+      } finally {
+        if (userText) {
+          appendInteraction(userText, text);
+        }
+        if (active()) {
+          if (userText) {
+            setTranscript(null);
+            setReply(null);
+          }
+          setState('idle');
+        }
+      }
+    },
+    [appendInteraction],
+  );
 
   const process = useCallback(
     async (uri: string) => {
+      // Capture the run's generation; cancel() bumps the ref, making
+      // active() false for this run from that point on.
+      const gen = generationRef.current;
+      const active = () => generationRef.current === gen;
+
       setState('processing');
       setError(null);
       try {
         const text = await transcribeRecording(uri);
+        if (!active()) return;
         setTranscript(text);
 
         const intent = await extractIntent({ text });
+        if (!active()) return; // bail before any side effect (no save after blur)
 
         if (
           intent.mode === 'transaction' &&
@@ -113,11 +175,18 @@ export function useVoiceAssistant() {
             category: intent.category ?? null,
             description: intent.description ?? null,
           });
+          // The transaction is committed — refresh data everywhere even if
+          // this run was cancelled mid-save.
           queryClient.invalidateQueries({
             queryKey: getListTransactionsQueryKey(),
           });
           queryClient.invalidateQueries({ queryKey: ['finance'] });
-          await speakAndFinish(saved.responseText);
+          if (!active()) {
+            // Saved but cancelled: record the exchange, skip speech/UI.
+            appendInteraction(text, saved.responseText);
+            return;
+          }
+          await speakAndFinish(saved.responseText, text, active);
           return;
         }
 
@@ -128,24 +197,26 @@ export function useVoiceAssistant() {
             person: intent.person ?? null,
             category: intent.category ?? null,
           });
-          await speakAndFinish(outcome.responseText);
+          if (!active()) return; // read-only — nothing to record
+          await speakAndFinish(outcome.responseText, text, active);
           return;
         }
 
         // mode === "unknown" or missing fields
         setError(UNKNOWN_MESSAGE);
-        await speakAndFinish(UNKNOWN_MESSAGE);
+        await speakAndFinish(UNKNOWN_MESSAGE, undefined, active);
       } catch (err) {
+        if (!active()) return;
         const message = urduErrorFrom(err);
         setError(message);
         if (message !== NETWORK_ERROR) {
-          await speakAndFinish(message);
+          await speakAndFinish(message, undefined, active);
         } else {
           setState('idle');
         }
       }
     },
-    [queryClient, speakAndFinish],
+    [queryClient, speakAndFinish, appendInteraction],
   );
 
   /** Tap handler for the mic button: idle → listening → processing → speaking → idle. */
@@ -202,5 +273,5 @@ export function useVoiceAssistant() {
     }
   }, [state, recorder, process]);
 
-  return { state, transcript, reply, error, toggle, cancel };
+  return { state, transcript, reply, error, interactions, toggle, cancel };
 }
