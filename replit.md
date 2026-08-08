@@ -8,6 +8,7 @@ Voice-first personal finance assistant for Pakistani users (Uplift AI × Replit 
 - `pnpm --filter @workspace/awaz-khata run dev` — Expo app (via workflow only)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate hooks/zod from OpenAPI
+- `pnpm --filter @workspace/api-server run seed` — load demo data (relative PKT dates; علی left empty for live demo)
 - Required secrets: `UPLIFTAI_API_KEY` (STT/TTS), `LLM_API_KEY` (Groq `gsk_...` or OpenAI, auto-detected by prefix; override with `LLM_PROVIDER`/`LLM_MODEL`). Optional `UPLIFTAI_VOICE_ID` (default `v_meklc281`).
 
 ## Stack

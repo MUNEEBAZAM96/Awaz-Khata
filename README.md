@@ -43,6 +43,16 @@ The LLM only extracts intent — **all financial calculations happen in the back
 5. **Point the app at the backend**: automatic — the app reads `EXPO_PUBLIC_DOMAIN` (set by the workflow) and calls `https://<domain>/api/...`. The frontend never touches Uplift AI or Groq directly; keys live only on the backend.
 6. **Open on a phone**: scan the Expo QR code in the preview pane with Expo Go (best experience — microphone works natively).
 
+## Demo data
+
+Load realistic sample data (salary, expenses across categories, two people with open/settled ledgers — spread over the current month in PKT):
+
+```bash
+pnpm --filter @workspace/api-server run seed
+```
+
+علی is intentionally left out so the live demo commands below build his ledger from scratch. Re-run the seed anytime to reset.
+
 ## Testing the voice pipeline
 
 Tap the big mic, say one of these, tap again to stop:
