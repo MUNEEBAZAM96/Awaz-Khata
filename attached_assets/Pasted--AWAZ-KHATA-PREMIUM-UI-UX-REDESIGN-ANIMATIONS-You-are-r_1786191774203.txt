@@ -1,0 +1,1534 @@
+# AWAZ KHATA — PREMIUM UI/UX REDESIGN + ANIMATIONS
+
+You are redesigning the frontend of **Awaz Khata — آواز کھاتہ**, a voice-first personal finance assistant built for Pakistani users.
+
+The core product idea is:
+
+> **Talk to your money.**
+
+The user speaks naturally in Urdu, Roman Urdu, English, or mixed language, and the app understands, records, calculates, and speaks the answer back.
+
+The backend and AI functionality already exists / is being developed.
+
+Your task in this instruction is primarily:
+
+# BUILD A BEAUTIFUL, MODERN, POLISHED MOBILE UI/UX
+
+The final interface should feel like a **real startup product**, not a hackathon prototype.
+
+It should be visually impressive when demonstrated on a projector or phone.
+
+---
+
+# IMPORTANT — DO NOT BREAK THE EXISTING FUNCTIONALITY
+
+Before modifying anything:
+
+1. Inspect the existing frontend.
+2. Understand the current Expo Router structure.
+3. Understand the existing API service.
+4. Understand the existing audio recording.
+5. Understand the existing Uplift AI integration.
+6. Understand the existing Groq integration.
+7. Understand how transactions are loaded and saved.
+
+Then redesign the UI around the existing functionality.
+
+DO NOT:
+
+* rebuild the backend
+* replace Uplift AI
+* replace Groq
+* add a database
+* remove working API endpoints
+* remove working voice functionality
+* change working business logic unnecessarily
+
+The redesign should improve the presentation and UX while preserving functionality.
+
+---
+
+# 1. TECHNOLOGY
+
+Use:
+
+* React Native
+* Expo
+* Expo Router
+* TypeScript
+* NativeWind
+* Expo-compatible animation APIs
+* Existing icon library if available
+
+Prefer:
+
+```text
+Animated API
+```
+
+or:
+
+```text
+react-native-reanimated
+```
+
+if already installed and compatible with the project's Expo SDK.
+
+Do not introduce large animation libraries unnecessarily.
+
+---
+
+# 2. DESIGN DIRECTION
+
+The visual direction should be:
+
+### Modern
+
+### Premium
+
+### Friendly
+
+### Warm
+
+### Minimal but expressive
+
+### Voice-first
+
+### Pakistani / Urdu focused
+
+Think:
+
+**Apple-level simplicity + modern fintech cards + voice assistant interaction.**
+
+Do NOT make it look like a boring accounting application.
+
+Do NOT make it look like a corporate banking app.
+
+Do NOT make everything flat.
+
+We WANT:
+
+* beautiful cards
+* subtle shadows
+* gradients
+* rounded corners
+* depth
+* animated interactions
+* smooth transitions
+* micro-interactions
+* polished empty/loading states
+
+But keep the interface clean.
+
+---
+
+# 3. COLOR SYSTEM
+
+Create a centralized design system.
+
+Suggested palette:
+
+```text
+Background:
+#F7F8FC
+
+Primary:
+#5B4BFF
+
+Primary Dark:
+#4637D8
+
+Accent:
+#8B7CFF
+
+Text:
+#17171C
+
+Secondary Text:
+#73737F
+
+White:
+#FFFFFF
+
+Success:
+#20B26B
+
+Danger:
+#E85B68
+
+Border:
+#E8E8EF
+```
+
+You may adjust the exact values if needed, but maintain consistency.
+
+---
+
+# 4. GRADIENT SYSTEM
+
+Use gradients selectively.
+
+The primary microphone card can use a beautiful gradient.
+
+For example:
+
+```text
+Primary → Accent
+#5B4BFF → #8B7CFF
+```
+
+Use gradients for:
+
+* microphone hero
+* important summary card
+* active voice state
+
+Do NOT put gradients on every card.
+
+Gradients should communicate importance.
+
+---
+
+# 5. GLOBAL BACKGROUND
+
+Use a very light background.
+
+Example:
+
+```text
+#F7F8FC
+```
+
+Add subtle decorative background elements where appropriate.
+
+For example:
+
+* extremely subtle circles
+* soft blurred gradient blobs
+* low-opacity decorative shapes
+
+These should remain behind the content.
+
+They must NOT reduce readability.
+
+---
+
+# 6. CARD DESIGN SYSTEM
+
+Create a reusable card style.
+
+Cards should have:
+
+```text
+rounded-3xl
+bg-white
+border
+border-white/60
+shadow
+```
+
+Use generous padding.
+
+Example conceptual style:
+
+```text
+rounded-[28px]
+p-5
+bg-white
+shadow
+```
+
+Do not make every card identical.
+
+Use different hierarchy:
+
+### Hero card
+
+Large rounded corners.
+
+### Summary cards
+
+Medium rounded corners.
+
+### Transaction cards
+
+Smaller rounded corners.
+
+---
+
+# 7. HOME SCREEN
+
+The Home screen is the most important screen.
+
+The user should immediately understand:
+
+> This is where I talk to my money.
+
+Recommended layout:
+
+```text
+┌────────────────────────────────┐
+│                                │
+│  السلام علیکم 👋               │
+│  آج کا حساب کیا ہے؟            │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │  آج کا حساب              │  │
+│  │                          │  │
+│  │  Rs. 2,450               │  │
+│  │  آج کے اخراجات            │  │
+│  │                          │  │
+│  │  خرچ     دیا     وصول     │  │
+│  │  2450    3000    1000     │  │
+│  └──────────────────────────┘  │
+│                                │
+│       ┌──────────────┐         │
+│       │              │         │
+│       │     🎙️      │         │
+│       │              │         │
+│       └──────────────┘         │
+│                                │
+│        بولنے کے لیے دبائیں      │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │ آپ یہ بھی پوچھ سکتے ہیں  │  │
+│  │                          │  │
+│  │ "آج کتنا خرچ کیا؟"       │  │
+│  │ "علی کے کتنے باقی ہیں؟"  │  │
+│  └──────────────────────────┘  │
+│                                │
+│  حالیہ حساب                    │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │ 👤 علی کو دیے   -2,000   │  │
+│  │    آج، 10:42             │  │
+│  └──────────────────────────┘  │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │ ⛽ پٹرول          -800    │  │
+│  │    آج، 09:20             │  │
+│  └──────────────────────────┘  │
+│                                │
+│       پورا حساب دیکھیں →       │
+│                                │
+└────────────────────────────────┘
+```
+
+Adapt this intelligently to screen size.
+
+---
+
+# 8. HEADER
+
+Create a polished header.
+
+Top-left or RTL-appropriate positioning:
+
+```text
+السلام علیکم 👋
+```
+
+Below:
+
+```text
+آج کا حساب کیا ہے؟
+```
+
+Use:
+
+### Greeting
+
+16–18px.
+
+### Main question
+
+26–30px.
+
+Make the question visually strong.
+
+Add subtle fade-in animation when screen opens.
+
+---
+
+# 9. PROFILE / ASSISTANT VISUAL
+
+Do not add authentication or profiles.
+
+But you may create a tiny visual assistant indicator near the greeting.
+
+Example:
+
+```text
+● آواز کھاتہ
+```
+
+or a small circular microphone icon.
+
+This establishes the product identity.
+
+---
+
+# 10. TODAY SUMMARY HERO CARD
+
+Create a premium card.
+
+Large:
+
+```text
+آج کا حساب
+```
+
+Then:
+
+```text
+Rs. 2,450
+```
+
+Then:
+
+```text
+آج کے اخراجات
+```
+
+Use a subtle gradient background or a clean white card with accent details.
+
+Below it show:
+
+```text
+خرچ
+Rs. 2,450
+
+دیا
+Rs. 3,000
+
+وصول
+Rs. 1,000
+```
+
+Use three compact sections.
+
+Animate the numbers when the screen loads or when a transaction is added.
+
+Use a subtle counting animation if easy to implement.
+
+Do not make the animation slow.
+
+---
+
+# 11. HERO MICROPHONE
+
+This is the centerpiece of the entire app.
+
+Create a large premium microphone component.
+
+Structure:
+
+```text
+        outer glow
+
+      ┌───────────┐
+      │           │
+      │    🎙️     │
+      │           │
+      └───────────┘
+
+      بولنے کے لیے دبائیں
+```
+
+Use:
+
+* gradient background
+* shadow
+* glow
+* rounded circle
+* subtle elevation
+
+The button should look extremely polished.
+
+---
+
+# 12. MICROPHONE IDLE ANIMATION
+
+When idle:
+
+Use a very subtle breathing animation.
+
+Example:
+
+```text
+scale:
+1.00 → 1.04 → 1.00
+```
+
+Duration:
+
+approximately 1800–2200ms.
+
+Do not constantly bounce the button.
+
+The goal is to make it feel alive.
+
+---
+
+# 13. MICROPHONE LISTENING ANIMATION
+
+When recording begins:
+
+Create:
+
+### Outer pulse rings
+
+```text
+       ◯
+     ◯   ◯
+   ◯   🎙️  ◯
+     ◯   ◯
+       ◯
+```
+
+The rings should expand and fade.
+
+Use:
+
+```text
+opacity
+scale
+```
+
+animations.
+
+Inside the button, slightly animate the microphone.
+
+Change the label:
+
+```text
+سن رہا ہوں...
+```
+
+Add a small animated audio-wave indicator:
+
+```text
+▂ ▅ ▇ ▄ ▆ ▃ ▇
+```
+
+The waveform can animate up and down.
+
+---
+
+# 14. PROCESSING ANIMATION
+
+When state is:
+
+```text
+processing
+```
+
+Do not simply show a generic spinner.
+
+Create an intelligent-looking processing animation.
+
+Example:
+
+```text
+      ◌
+  سمجھ رہا ہوں...
+```
+
+Use:
+
+* rotating dots
+* pulsing orb
+* subtle shimmer
+
+The microphone can transition from the listening state into a calmer state.
+
+---
+
+# 15. SPEAKING ANIMATION
+
+When the app is playing Uplift TTS:
+
+Show:
+
+```text
+جواب دے رہا ہوں...
+```
+
+Create a subtle animated waveform:
+
+```text
+▂ ▅ ▃ ▇ ▄ ▆ ▂ ▅
+```
+
+The waveform should animate according to a simple repeating pattern.
+
+The microphone button can have a soft glow.
+
+This makes it obvious that:
+
+> The app is talking.
+
+---
+
+# 16. VOICE STATE TRANSITIONS
+
+Transitions must be smooth:
+
+```text
+idle
+ ↓
+listening
+ ↓
+processing
+ ↓
+speaking
+ ↓
+idle
+```
+
+Do not abruptly replace components.
+
+Use:
+
+* fade
+* scale
+* opacity
+* slight translation
+
+Animations around 200–400ms are ideal.
+
+---
+
+# 17. TRANSCRIPTION CARD
+
+After recording finishes:
+
+Show a floating card above/below the microphone.
+
+Example:
+
+```text
+┌────────────────────────────┐
+│ آپ نے کہا                   │
+│                            │
+│ "میں نے علی کو دو ہزار      │
+│  روپے دیے"                  │
+└────────────────────────────┘
+```
+
+Animate it:
+
+```text
+opacity 0 → 1
+translateY 10 → 0
+```
+
+Use a small microphone icon.
+
+This gives the user confidence that the app understood them.
+
+---
+
+# 18. SUCCESS TRANSACTION CARD
+
+When a transaction is successfully saved:
+
+Show a beautiful animated success card.
+
+Example:
+
+```text
+┌────────────────────────────┐
+│        ✓                   │
+│                            │
+│  حساب میں شامل کر دیا      │
+│                            │
+│  علی کو                    │
+│  Rs. 2,000                 │
+│  دیے گئے                   │
+│                            │
+└────────────────────────────┘
+```
+
+Animate:
+
+1. Card slides up.
+2. Checkmark scales from 0 → 1.
+3. Amount fades in.
+4. Card settles.
+
+Keep it visible briefly.
+
+Then return to the normal home state.
+
+---
+
+# 19. QUERY RESULT CARD
+
+For questions:
+
+Example:
+
+> "علی کے کتنے پیسے باقی ہیں؟"
+
+Display:
+
+```text
+┌────────────────────────────┐
+│  علی کا حساب               │
+│                            │
+│  دیا گیا       Rs. 5,000   │
+│  واپس ملا      Rs. 2,000   │
+│                            │
+│  ────────────────────────  │
+│                            │
+│  باقی          Rs. 3,000   │
+│                            │
+└────────────────────────────┘
+```
+
+Make the final balance visually dominant.
+
+Animate the balance number.
+
+---
+
+# 20. VOICE SUGGESTION CARDS
+
+Create a horizontal scrolling section:
+
+```text
+آپ یہ بھی پوچھ سکتے ہیں
+```
+
+Cards/pills:
+
+```text
+┌──────────────────────┐
+│ آج کتنا خرچ کیا؟     │
+└──────────────────────┘
+
+┌──────────────────────┐
+│ علی کے کتنے باقی؟    │
+└──────────────────────┘
+
+┌──────────────────────┐
+│ اس مہینے کا خرچ؟     │
+└──────────────────────┘
+```
+
+Use:
+
+* rounded-full
+* white background
+* subtle border
+* slight shadow
+
+When pressed, the pill should slightly scale down.
+
+These suggestions teach users the product.
+
+---
+
+# 21. RECENT TRANSACTIONS
+
+Make recent transactions visually appealing.
+
+Section header:
+
+```text
+حالیہ حساب
+```
+
+Add:
+
+```text
+دیکھیں سب →
+```
+
+Each transaction should be a card or rounded row.
+
+Example:
+
+```text
+┌────────────────────────────────┐
+│                                │
+│  👤    علی کو دیے              │
+│        آج، 10:42 AM             │
+│                         -2,000 │
+│                                │
+└────────────────────────────────┘
+```
+
+Use a subtle icon container.
+
+Example:
+
+```text
+rounded-xl
+bg-red-50
+```
+
+for expenses/given.
+
+And:
+
+```text
+bg-green-50
+```
+
+for received/income.
+
+Do not use aggressive red/green.
+
+Use very light tints.
+
+---
+
+# 22. TRANSACTION ENTRY ANIMATION
+
+When a new transaction is added:
+
+Animate it into the list.
+
+Sequence:
+
+```text
+opacity 0
+translateY -15
+scale 0.98
+```
+
+to:
+
+```text
+opacity 1
+translateY 0
+scale 1
+```
+
+Duration:
+
+250–350ms.
+
+This creates a satisfying feeling that:
+
+> "The app remembered what I said."
+
+---
+
+# 23. LEDGER SCREEN
+
+The Ledger should feel like the user's personal financial journal.
+
+Header:
+
+```text
+←   میرا حساب
+```
+
+Use a large title:
+
+```text
+میرا حساب
+```
+
+Subtitle:
+
+```text
+آپ کے پیسوں کا خلاصہ
+```
+
+---
+
+# 24. LEDGER SUMMARY CARDS
+
+Create a beautiful grid.
+
+For example:
+
+```text
+┌───────────────────┐ ┌───────────────────┐
+│ آمدن              │ │ خرچ               │
+│                   │ │                   │
+│ Rs. 85,000        │ │ Rs. 42,500        │
+│ ↗                 │ │ ↘                 │
+└───────────────────┘ └───────────────────┘
+
+┌───────────────────┐ ┌───────────────────┐
+│ دیا               │ │ وصول              │
+│                   │ │                   │
+│ Rs. 12,000        │ │ Rs. 5,000         │
+│                   │ │                   │
+└───────────────────┘ └───────────────────┘
+```
+
+Cards should have:
+
+* rounded corners
+* subtle shadows
+* small icons
+* strong numbers
+* muted labels
+
+Do NOT overfill them.
+
+---
+
+# 25. PEOPLE BALANCE CARDS
+
+Create:
+
+```text
+لوگوں کا حساب
+```
+
+Each person gets a clean row:
+
+```text
+┌────────────────────────────────┐
+│  👤  علی                       │
+│      آپ کو دینے ہیں             │
+│                         Rs.3,000│
+└────────────────────────────────┘
+```
+
+For settled:
+
+```text
+✓ حساب برابر
+```
+
+Use a subtle green indicator.
+
+For money owed:
+
+Use a subtle warm/red indicator.
+
+---
+
+# 26. TRANSACTION HISTORY
+
+Group transactions by date.
+
+Example:
+
+```text
+آج
+```
+
+Then cards:
+
+```text
+┌────────────────────────────────┐
+│ ⛽  پٹرول              -Rs.800 │
+│     09:20 AM                   │
+└────────────────────────────────┘
+
+┌────────────────────────────────┐
+│ 👤  علی کو دیے       -Rs.2,000 │
+│     10:42 AM                   │
+└────────────────────────────────┘
+```
+
+Then:
+
+```text
+کل
+```
+
+and continue.
+
+---
+
+# 27. FLOATING LEDGER BUTTON
+
+On Home, create a premium floating action/button:
+
+```text
+پورا حساب دیکھیں   →
+```
+
+Use:
+
+* rounded-full
+* shadow
+* white background
+* accent icon
+
+It should feel like a secondary action.
+
+Do NOT compete with the microphone.
+
+---
+
+# 28. MICRO-INTERACTIONS
+
+Add micro-interactions throughout the app.
+
+Examples:
+
+### Button press
+
+Scale:
+
+```text
+1 → 0.96 → 1
+```
+
+### Cards
+
+Slight fade/slide when appearing.
+
+### Transaction added
+
+Slide into list.
+
+### Summary numbers
+
+Animate.
+
+### Voice button
+
+Pulse.
+
+### Back button
+
+Subtle scale.
+
+### Suggestion pill
+
+Scale on press.
+
+All animations should feel fast.
+
+---
+
+# 29. SCREEN TRANSITIONS
+
+Use smooth Expo Router transitions if compatible.
+
+Home → Ledger:
+
+Subtle horizontal transition.
+
+Ledger → Home:
+
+Reverse transition.
+
+Do not use dramatic transitions.
+
+The transition should feel like a polished native application.
+
+---
+
+# 30. SHADOWS
+
+Use subtle shadows.
+
+Do NOT use huge dark shadows.
+
+Cards should appear slightly elevated from the background.
+
+The hierarchy should feel:
+
+```text
+Background
+    ↓
+Cards
+    ↓
+Hero Card
+    ↓
+Microphone
+```
+
+The microphone should have the highest visual elevation.
+
+---
+
+# 31. CORNER RADIUS
+
+Use a consistent radius system.
+
+Recommended:
+
+```text
+Small:
+12px
+
+Medium:
+18px
+
+Large:
+24px
+
+Hero:
+32px
+
+Pills:
+999px
+```
+
+Avoid mixing random radii.
+
+---
+
+# 32. SPACING SYSTEM
+
+Use consistent spacing.
+
+Prefer:
+
+```text
+4
+8
+12
+16
+20
+24
+32
+40
+48
+```
+
+Do not randomly use:
+
+```text
+13px
+17px
+27px
+31px
+```
+
+unless there is a strong reason.
+
+---
+
+# 33. ICON STYLE
+
+Use one icon style throughout.
+
+Icons should be:
+
+* simple
+* rounded
+* consistent
+* medium weight
+
+Do not mix:
+
+* emoji
+* outlined icons
+* filled icons
+* random SVG styles
+
+Use emojis only for warmth in selected locations.
+
+---
+
+# 34. EMPTY STATE
+
+When there are no transactions:
+
+Create a beautiful empty state.
+
+Example:
+
+```text
+          ◉
+       🎙️
+
+     ابھی حساب خالی ہے
+
+  اپنا پہلا حساب بول کر
+       شامل کریں۔
+
+    🎙️ بولنا شروع کریں
+```
+
+Use a soft illustration or icon.
+
+Do not show an empty white screen.
+
+---
+
+# 35. ERROR STATE
+
+Create a polished error card.
+
+Example:
+
+```text
+┌────────────────────────────┐
+│          ⚠️               │
+│                            │
+│    آواز سمجھ نہیں آئی      │
+│                            │
+│    دوبارہ بول کر کوشش کریں │
+│                            │
+│      دوبارہ کوشش کریں      │
+└────────────────────────────┘
+```
+
+Use a subtle red/pink tint.
+
+Never show technical errors.
+
+---
+
+# 36. SUCCESS FEEDBACK
+
+Use a consistent success language.
+
+Examples:
+
+```text
+✓ حساب میں شامل کر دیا
+```
+
+```text
+✓ حساب اپ ڈیٹ ہو گیا
+```
+
+```text
+✓ سمجھ گیا
+```
+
+Use animated checkmarks.
+
+A checkmark can:
+
+```text
+scale: 0 → 1.15 → 1
+```
+
+---
+
+# 37. ACCESSIBILITY
+
+Maintain:
+
+* minimum 44px touch targets
+* high contrast
+* readable Urdu
+* accessible labels
+* clear state text
+
+Animations must not make the app difficult to understand.
+
+The state text should always communicate what is happening.
+
+---
+
+# 38. PERFORMANCE
+
+Animations must remain smooth.
+
+Target:
+
+**60 FPS where practical.**
+
+Avoid:
+
+* unnecessary infinite animations
+* huge lists with animated every-row elements
+* expensive blur effects everywhere
+* unnecessary re-renders
+
+Only the microphone should have a continuously running animation when necessary.
+
+---
+
+# 39. DO NOT ADD COMPLEX FEATURES
+
+Do NOT add:
+
+* authentication
+* banking APIs
+* payments
+* charts everywhere
+* budgeting systems
+* investment tracking
+* subscriptions
+* profiles
+* social features
+* chat history
+* unnecessary settings
+
+The product should remain focused.
+
+---
+
+# 40. FINAL UX HIERARCHY
+
+The visual importance must be:
+
+```text
+1. 🎙️ VOICE
+       ↓
+2. Current voice state
+       ↓
+3. Today's money summary
+       ↓
+4. Voice suggestions
+       ↓
+5. Recent activity
+       ↓
+6. Full ledger
+```
+
+The microphone is the hero.
+
+Everything else supports it.
+
+---
+
+# 41. FINAL HOME SCREEN EXPERIENCE
+
+When the user opens the application:
+
+They should see:
+
+```text
+السلام علیکم 👋
+
+آج کا حساب کیا ہے؟
+
+┌─────────────────────────────┐
+│       آج کا حساب            │
+│                             │
+│        Rs. 2,450            │
+│       آج کے اخراجات         │
+│                             │
+│  خرچ       دیا       وصول   │
+│  2450     3000       1000   │
+└─────────────────────────────┘
+
+
+          ◉
+       🎙️
+
+      بولنے کے لیے دبائیں
+
+
+آپ یہ بھی پوچھ سکتے ہیں
+
+[ آج کتنا خرچ کیا؟ ]
+[ علی کے کتنے باقی ہیں؟ ]
+
+
+حالیہ حساب
+
+┌─────────────────────────────┐
+│ 👤  علی کو دیے     -2,000  │
+│     آج، 10:42 AM            │
+└─────────────────────────────┘
+
+┌─────────────────────────────┐
+│ ⛽  پٹرول            -800   │
+│     آج، 09:20 AM            │
+└─────────────────────────────┘
+
+
+      پورا حساب دیکھیں →
+```
+
+Make this visually polished, not textually literal.
+
+---
+
+# 42. THE "WOW" MOMENT
+
+The hackathon judge should be able to see this:
+
+User:
+
+> "میں نے علی کو دو ہزار روپے دیے۔"
+
+Immediately:
+
+### UI
+
+Microphone animates.
+
+```text
+سن رہا ہوں...
+```
+
+Then:
+
+```text
+سمجھ رہا ہوں...
+```
+
+Then a beautiful card appears:
+
+```text
+✓
+
+علی کو
+Rs. 2,000
+دیے گئے
+```
+
+At the same time, Uplift AI speaks:
+
+> "علی کو دو ہزار روپے دے دیے گئے ہیں۔"
+
+Then the transaction smoothly appears at the top of Recent Activity.
+
+The summary updates.
+
+The user says:
+
+> "علی کے کتنے باقی ہیں؟"
+
+And the app responds with:
+
+```text
+علی کا حساب
+
+دیا گیا       Rs. 5,000
+واپس ملا      Rs. 2,000
+
+باقی          Rs. 3,000
+```
+
+while speaking the answer in Urdu.
+
+THIS is the experience we are designing for.
+
+---
+
+# 43. IMPLEMENTATION REQUIREMENT
+
+Do not just create static mockups.
+
+Implement the UI directly in the actual Expo application.
+
+Use real data from the existing APIs.
+
+Use the existing voice states.
+
+Use real transaction data.
+
+Use real navigation.
+
+Use real loading/error states.
+
+Use real animations.
+
+The UI must work end-to-end.
+
+---
+
+# 44. BEFORE FINISHING
+
+Run the application.
+
+Test:
+
+### Test 1
+
+Open app.
+
+Check first impression.
+
+### Test 2
+
+Press microphone.
+
+Verify listening animation.
+
+### Test 3
+
+Record a transaction.
+
+Verify processing state.
+
+### Test 4
+
+Verify transaction success animation.
+
+### Test 5
+
+Verify TTS playback state.
+
+### Test 6
+
+Verify activity list updates.
+
+### Test 7
+
+Ask a financial query.
+
+Verify result card.
+
+### Test 8
+
+Open Ledger.
+
+Verify transitions.
+
+### Test 9
+
+Check small phone dimensions.
+
+### Test 10
+
+Check large phone dimensions.
+
+### Test 11
+
+Check Urdu RTL alignment.
+
+### Test 12
+
+Check that no text is clipped.
+
+### Test 13
+
+Check that all touch targets are at least 44px.
+
+---
+
+# 45. FINAL QUALITY BAR
+
+The finished UI should look like something that could be shown to:
+
+* hackathon judges
+* investors
+* Pakistani shopkeepers
+* everyday consumers
+
+It should NOT look like:
+
+> "A developer built a form with a microphone."
+
+It should look like:
+
+> **"Someone built a real voice-first financial assistant."**
+
+The product should have a strong visual identity.
+
+The microphone should be memorable.
+
+The animations should make the voice interaction feel alive.
+
+The cards should make financial information easy to understand.
+
+The Urdu typography should make the application feel native to Pakistan.
+
+The entire experience should be:
+
+# SPEAK → UNDERSTAND → SEE → HEAR
+
+Do not sacrifice reliability for visual effects.
+
+**Working voice interaction comes first.**
+
+**Polished UI comes second.**
+
+**Animations and visual delight come third.**
+
+But all three should exist in the final result.
