@@ -25,7 +25,7 @@ catalog:
   react-dom: 19.1.0
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
-  tsx: ^4.21.0
+  tsx: ^4.19.2
   vite: ^7.3.2
   wouter: ^3.3.5
   zod: 3.25.76
@@ -43,7 +43,8 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
-  '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
+  tsx: 4.19.2
+  '@esbuild-kit/esm-loader': npm:tsx@^4.19.2
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-freebsd-ia32': '-'
