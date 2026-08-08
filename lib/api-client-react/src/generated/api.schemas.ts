@@ -226,6 +226,38 @@ export interface QueryResult {
   responseText: string;
 }
 
+export type ChatMessageRole = typeof ChatMessageRole[keyof typeof ChatMessageRole];
+
+
+export const ChatMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface ChatMessage {
+  role: ChatMessageRole;
+  content: string;
+}
+
+export interface ChatRequest {
+  /**
+     * The user's open-ended finance question (Urdu / Roman Urdu / English)
+     * @minLength 1
+     * @maxLength 1000
+     */
+  message: string;
+  /**
+     * Recent conversation turns, oldest first
+     * @maxItems 12
+     */
+  history?: ChatMessage[];
+}
+
+export interface ChatAnswer {
+  /** Grounded financial advice in simple spoken Urdu */
+  answer: string;
+}
+
 export interface SpeakRequest {
   /** @minLength 1 */
   text: string;

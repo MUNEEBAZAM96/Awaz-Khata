@@ -1,0 +1,47 @@
+#8 - Tab bar with AI finance chat
+What & Why
+Restructure the app into bottom-tab navigation and add an AI chat tab — a personal finance advisor in Urdu. Users ask open-ended questions about their money («کیا میں اگلے مہینے گاڑی لے سکتا ہوں؟», «میں پیسے کیسے بچاؤں؟») and the assistant answers by reasoning over their real ledger data. The finance engine computes all numbers from the JSON ledger (monthly income/expenses/savings, category breakdown, people balances); the LLM receives only these precomputed figures plus the question and gives grounded, practical advice in simple spoken-style Urdu — it never calculates or invents amounts, consistent with the app's core rule that the engine is the only math authority.
+
+Done looks like
+Bottom tab bar with three tabs in the app's existing visual style: Home (voice assistant), Chat (AI advisor), Ledger (کھاتہ)
+Existing home and ledger screens work unchanged inside their tabs; voice pipeline unaffected
+Chat tab shows a conversation view: user messages and assistant replies as bubbles, RTL-friendly, with a friendly Urdu empty state suggesting example questions
+User can ask by typing or by tapping a mic button (same speech-to-text as the main screen)
+Assistant replies are grounded in actual ledger figures (e.g. cites real monthly savings when answering an affordability question), in simple Urdu, 2–4 sentences
+Replies can be heard: each assistant answer plays via the existing text-to-speech, with a way to mute/replay
+If the ledger is empty or the LLM fails, the chat shows a graceful Urdu message; the app never gets stuck on a spinner
+Works in web preview and Expo Go
+Out of scope
+No database — ledger stays in the JSON file (product spec forbids adding a DB)
+No charts/graphs in chat answers
+No multi-session chat history persistence (conversation lives in memory for the session)
+No changes to the existing transaction/query voice pipeline or its deterministic Urdu templates
+Steps
+Chat API endpoint — Add a chat endpoint to the API contract and regenerate the client. Backend builds a financial snapshot via the finance engine (this month and last month income/expenses/savings, top categories, people balances, totals) and sends snapshot + question + short conversation history to the existing LLM client with an Urdu financial-advisor system prompt; returns the answer text. Reject/handle LLM failures with a speakable Urdu error.
+Tab navigation — Convert the app's root navigation to bottom tabs (Home, Chat, Ledger) styled with the existing palette and Urdu labels, keeping the current screens intact.
+Chat screen — Build the conversation UI: bubbles, auto-scroll, typing/loading indicator, Urdu empty state with example questions, text input plus mic input reusing the existing transcription flow.
+Spoken answers — Play each assistant reply through the existing text-to-speech playback with a mute/replay control, reusing the current audio utilities.
+Verification — Exercise the chat end-to-end with the seeded demo data (affordability question, savings question, person-balance question, empty-ledger case) and confirm tab navigation and RTL layout on web preview and phone-sized screens.
+Note: after the UI-polish task merges, adopt its typography/typeface conventions in the new tab bar and chat screen so the app stays visually consistent.
+
+Relevant files
+artifacts/awaz-khata/app/_layout.tsx
+artifacts/awaz-khata/app/index.tsx
+artifacts/awaz-khata/app/ledger.tsx
+artifacts/awaz-khata/hooks/useVoiceAssistant.ts
+artifacts/awaz-khata/lib/api.ts
+artifacts/awaz-khata/lib/audio.ts
+artifacts/api-server/src/routes/index.ts
+artifacts/api-server/src/lib/llm.ts
+artifacts/api-server/src/lib/finance.ts
+artifacts/api-server/src/lib/store.ts
+lib/api-spec/openapi.yaml
+Dependencies
+
+Polish mobile app UI
+Open task
+
+i230100
+Started task
+Tab bar with AI finance chat
+Restructure the app into bottom-tab navigation and add an AI chat tab — a personal finance 

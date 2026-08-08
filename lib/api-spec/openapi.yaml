@@ -142,6 +142,33 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /chat:
+    post:
+      operationId: askAdvisor
+      summary: Ask the AI finance advisor a question grounded in real ledger figures
+      description: >
+        The backend computes a financial snapshot with the deterministic finance
+        engine (this month / last month income, expenses, savings, top categories,
+        people balances, all-time totals) and passes only those precomputed figures
+        plus the question and recent turns to the LLM. The LLM never calculates.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Advisor answer in simple spoken Urdu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatAnswer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "502":
+          $ref: "#/components/responses/UpstreamError"
+
   /query:
     post:
       operationId: runQuery
@@ -393,6 +420,40 @@ components:
         responseText:
           type: string
           description: Deterministic Urdu sentence to speak aloud
+
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: The user's open-ended finance question (Urdu / Roman Urdu / English)
+        history:
+          type: array
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+          description: Recent conversation turns, oldest first
+
+    ChatAnswer:
+      type: object
+      required: [answer]
+      properties:
+        answer:
+          type: string
+          description: Grounded financial advice in simple spoken Urdu
 
     SpeakRequest:
       type: object

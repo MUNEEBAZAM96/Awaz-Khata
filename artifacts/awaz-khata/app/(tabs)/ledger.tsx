@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import {
   useListTransactions,
   getListTransactionsQueryKey,
@@ -53,7 +52,6 @@ function balanceDirection(balance: number): string {
 export default function LedgerScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
 
   const query = useListTransactions({
     query: { queryKey: getListTransactionsQueryKey() },
@@ -63,7 +61,6 @@ export default function LedgerScreen() {
   const people = useMemo(() => peopleFrom(transactions), [transactions]);
 
   const webTop = Platform.OS === 'web' ? 67 : 0;
-  const webBottom = Platform.OS === 'web' ? 34 : 0;
 
   const summaryBlocks = [
     { label: 'آمدن', value: summary?.income ?? 0, color: colors.success },
@@ -74,25 +71,8 @@ export default function LedgerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* RTL header: back button sits on the right, arrow points right */}
       <View style={[styles.header, { paddingTop: insets.top + webTop + 12 }]}>
-        <Pressable
-          testID="back-button"
-          accessibilityLabel="واپس"
-          onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.backButton,
-            {
-              backgroundColor: colors.secondary,
-              borderColor: colors.border,
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-        >
-          <Feather name="arrow-right" size={22} color={colors.foreground} />
-        </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>میرا کھاتہ</Text>
-        <View style={styles.backButtonPlaceholder} />
       </View>
 
       {query.isLoading ? (
@@ -121,7 +101,7 @@ export default function LedgerScreen() {
         <ScrollView
           contentContainerStyle={{
             paddingHorizontal: 20,
-            paddingBottom: insets.bottom + webBottom + 24,
+            paddingBottom: 24,
           }}
           refreshControl={
             <RefreshControl
@@ -250,23 +230,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 12,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPlaceholder: {
-    width: 48,
-    height: 48,
   },
   title: {
     fontSize: 22,

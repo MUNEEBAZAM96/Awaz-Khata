@@ -15,11 +15,11 @@ export interface TransactionRecord {
   timestamp: string;
 }
 
-const dataDir = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "data",
-);
+// Data directory lives next to the compiled server by default. AWAZ_DATA_DIR
+// overrides it (tests point it at a temp directory).
+const dataDir = process.env.AWAZ_DATA_DIR
+  ? path.resolve(process.env.AWAZ_DATA_DIR)
+  : path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data");
 const dataFile = path.join(dataDir, "transactions.json");
 
 /**

@@ -4,6 +4,9 @@ export * from "./generated/api";
 // we cannot `export * from "./generated/types"`.
 export type {
   ApiError,
+  ChatAnswer,
+  ChatMessage,
+  ChatRequest,
   CreateTransactionResult,
   ExtractRequest,
   ExtractResult,
@@ -21,6 +24,7 @@ export type {
   TranscriptionResult,
 } from "./generated/types";
 export {
+  ChatMessageRole,
   ExtractResultMode,
   ExtractResultType,
   ExtractResultQueryType,

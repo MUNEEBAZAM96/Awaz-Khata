@@ -26,12 +26,15 @@ Voice-first personal finance assistant for Pakistani users (Uplift AI × Replit 
 
 ## Where things live
 
-- `lib/api-spec/openapi.yaml` — API contract (/voice/transcribe, /voice/extract, /voice/speak, /transactions, /transactions/person/:person, /query)
-- `artifacts/api-server/src/lib/finance.ts` — finance engine + ALL Urdu response templates (deterministic; LLM never calculates)
-- `artifacts/api-server/src/lib/llm.ts` — Groq/OpenAI intent extraction with strict zod validation
-- `artifacts/api-server/src/routes/` — voice.ts, transactions.ts, query.ts
-- `artifacts/awaz-khata/hooks/useVoiceAssistant.ts` — voice pipeline state machine (idle→listening→processing→speaking); exposes `reply` (last spoken response, shown on screen by VoiceStatus)
-- `artifacts/awaz-khata/components/` — VoiceButton, VoiceStatus, ActivityList, SummaryHeader, TransactionRow
+- `lib/api-spec/openapi.yaml` — API contract (/voice/transcribe, /voice/extract, /voice/speak, /transactions, /transactions/person/:person, /query, /chat)
+- `artifacts/api-server/src/lib/finance.ts` — finance engine + ALL Urdu response templates (deterministic; LLM never calculates); `buildFinancialSnapshot` computes advisor figures (this/last month, top categories, people balances)
+- `artifacts/api-server/src/lib/llm.ts` — Groq/OpenAI intent extraction with strict zod validation + `adviseOnFinances` (Urdu advisor chat, grounded in snapshot figures only)
+- `artifacts/api-server/src/routes/` — voice.ts, transactions.ts, query.ts, chat.ts
+- `artifacts/awaz-khata/app/(tabs)/` — bottom tabs: index (voice home), chat (AI advisor), ledger; declared order ledger→chat→index so Home sits rightmost (RTL feel)
+- `artifacts/awaz-khata/hooks/useVoiceAssistant.ts` — voice pipeline state machine (idle→listening→processing→speaking); exposes `reply` (last spoken response, shown on screen by VoiceStatus) + `cancel` (blur cleanup)
+- `artifacts/awaz-khata/hooks/useFinanceChat.ts` — chat state (send/history/TTS with mute + per-bubble replay; generation counter cancels in-flight TTS)
+- `artifacts/awaz-khata/hooks/useVoiceInput.ts` — small mic→transcript hook for chat (auto-sends)
+- `artifacts/awaz-khata/components/` — VoiceButton, VoiceStatus, ActivityList, SummaryHeader, TransactionRow, ChatMessageBubble
 - `artifacts/awaz-khata/constants/typography.ts` — Urdu (Noto Nastaliq Urdu) + Inter font tokens; every Urdu style needs `urduLine()` (~2× fontSize) or Nastaliq clips. RTL is done per-row with `flexDirection: 'row-reverse'` (no I18nManager forcing)
 - `artifacts/awaz-khata/lib/` — api.ts (multipart transcribe upload), audio.ts (base64 MP3 playback)
 - `README.md` — hackathon-facing setup + demo commands doc
@@ -43,6 +46,8 @@ Voice-first personal finance assistant for Pakistani users (Uplift AI × Replit 
 - Extract endpoint returns `{mode:"unknown"}` for non-financial speech (200); invalid LLM output → 502 with Urdu error
 - `/transcribe` upload bypasses generated hooks (RN FormData `{uri,name,type}` shape); everything else uses generated client with `setBaseUrl` in `_layout.tsx`
 - given/received transactions require a person (400 otherwise)
+- `/chat` advisor: backend builds the financial snapshot, LLM only reasons over those numbers (2–4 spoken-Urdu sentences, plain text for TTS); empty ledger → deterministic Urdu answer without LLM; failure → 502 Urdu error. No persisted chat history (in-memory per session, per spec)
+- Voice ownership across tabs: tab screens stay mounted, so Home/Chat each cancel recording + speech on blur (`cancel`/`stopSpeaking`); `lib/audio.ts` has module-level `stopPlayback` so two voices can never overlap
 
 ## User preferences
 
@@ -52,6 +57,6 @@ Voice-first personal finance assistant for Pakistani users (Uplift AI × Replit 
 ## Gotchas
 
 - Uplift STT is beta — /voice/transcribe wraps failures in Urdu 502s
-- OpenAPI changes: run codegen, then re-fix `lib/api-zod/src/index.ts` if orval overwrites it (explicit exports required — `TranscribeAudioBody` zod const collides with same-named type)
+- OpenAPI changes: run codegen, then ADD new schema type names to the explicit export lists in `lib/api-zod/src/index.ts` (never `export * from "./generated/types"` — `TranscribeAudioBody` zod const collides with the same-named type). Codegen's `clean: true` wipes only `src/generated/`, the hand-written barrel survives; `typecheck:libs` runs automatically after codegen and catches misses
 - `lib/api-zod/tsconfig.json` includes DOM lib (multipart schema uses `File`/`Blob`)
 - Script matching: person names match case-insensitively but not across scripts (علی ≠ Ali); fine in practice since STT consistently produces Urdu script

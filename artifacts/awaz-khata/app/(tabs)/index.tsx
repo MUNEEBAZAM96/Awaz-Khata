@@ -1,9 +1,8 @@
-import React from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import {
   runQuery,
   useListTransactions,
@@ -20,8 +19,17 @@ import { ActivityList } from '@/components/ActivityList';
 export default function MainVoiceScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { state, transcript, reply, error, toggle } = useVoiceAssistant();
+  const { state, transcript, reply, error, toggle, cancel } = useVoiceAssistant();
+
+  // Switching tabs mid-recording/mid-speech must never leave the mic or
+  // voice running — abandon both on blur.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        void cancel();
+      };
+    }, [cancel]),
+  );
 
   const query = useListTransactions({
     query: { queryKey: getListTransactionsQueryKey() },
@@ -40,7 +48,6 @@ export default function MainVoiceScreen() {
       : 0;
 
   const webTop = Platform.OS === 'web' ? 67 : 0;
-  const webBottom = Platform.OS === 'web' ? 34 : 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -83,31 +90,6 @@ export default function MainVoiceScreen() {
           <ActivityList transactions={transactions} />
         </View>
       </ScrollView>
-
-      <View
-        style={[
-          styles.bottomBar,
-          { paddingBottom: insets.bottom + webBottom + 16 },
-        ]}
-      >
-        <Pressable
-          testID="open-ledger"
-          onPress={() => router.push('/ledger')}
-          style={({ pressed }) => [
-            styles.ledgerButton,
-            {
-              backgroundColor: colors.secondary,
-              borderColor: colors.border,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <Feather name="book" size={20} color={colors.secondaryForeground} />
-          <Text style={[styles.ledgerButtonText, { color: colors.secondaryForeground }]}>
-            پورا کھاتہ دیکھیں
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -122,7 +104,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 4,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 30,
@@ -151,24 +133,5 @@ const styles = StyleSheet.create({
   },
   activitySection: {
     minHeight: 72,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 10,
-  },
-  ledgerButton: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    minHeight: 56,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  ledgerButtonText: {
-    fontSize: 16,
-    lineHeight: urduLine(16),
-    fontFamily: fonts.urduMedium,
-    writingDirection: 'rtl',
   },
 });

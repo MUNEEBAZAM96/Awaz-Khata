@@ -19,7 +19,7 @@ import {
   type TransactionInputType,
 } from '@workspace/api-client-react';
 import { transcribeRecording } from '@/lib/api';
-import { playBase64Audio } from '@/lib/audio';
+import { playBase64Audio, stopPlayback } from '@/lib/audio';
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -52,10 +52,29 @@ export function useVoiceAssistant() {
   const [reply, setReply] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const busyRef = useRef(false);
+  const stateRef = useRef<VoiceState>('idle');
+  stateRef.current = state;
 
   useEffect(() => {
     AudioModule.requestRecordingPermissionsAsync().catch(() => undefined);
   }, []);
+
+  /**
+   * Abandon an in-progress recording (discarded, not processed) and stop
+   * any speech when the user leaves the screen. Stable identity — safe as
+   * a useFocusEffect dependency.
+   */
+  const cancel = useCallback(async () => {
+    if (stateRef.current === 'listening') {
+      try {
+        await recorder.stop();
+      } catch {
+        // recorder already stopped
+      }
+      setState('idle');
+    }
+    stopPlayback();
+  }, [recorder]);
 
   /** Show + speak a sentence aloud; never throws, always lands back on idle. */
   const speakAndFinish = useCallback(async (text: string) => {
@@ -183,5 +202,5 @@ export function useVoiceAssistant() {
     }
   }, [state, recorder, process]);
 
-  return { state, transcript, reply, error, toggle };
+  return { state, transcript, reply, error, toggle, cancel };
 }

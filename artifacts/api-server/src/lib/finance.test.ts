@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TransactionRecord, TransactionType } from "./store";
 import {
+  buildFinancialSnapshot,
   confirmationFor,
   filterByPeriod,
+  filterLastMonth,
   personStats,
   runFinanceQuery,
   summarize,
@@ -420,5 +422,60 @@ describe("runFinanceQuery", () => {
       expect(out.result).toEqual({ period: "today", total: 500 });
       expect(out.responseText).toBe("آپ نے آج 500 روپے خرچ کیے ہیں۔");
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildFinancialSnapshot — advisor figures
+// ---------------------------------------------------------------------------
+
+describe("buildFinancialSnapshot", () => {
+  const records = [
+    // this month (Aug 2026 PKT)
+    tx({ amount: 5000, type: "income", timestamp: "2026-08-03T07:00:00.000Z" }),
+    tx({ amount: 900, type: "expense", category: "کھانا", timestamp: "2026-08-04T07:00:00.000Z" }),
+    tx({ amount: 400, type: "expense", category: "سفر", timestamp: "2026-08-05T07:00:00.000Z" }),
+    tx({ amount: 1000, type: "given", person: "علی", timestamp: "2026-08-05T08:00:00.000Z" }),
+    // last month (Jul 2026 PKT)
+    tx({ amount: 9000, type: "income", timestamp: "2026-07-10T07:00:00.000Z" }),
+    tx({ amount: 7000, type: "expense", timestamp: "2026-07-12T07:00:00.000Z" }),
+    tx({ amount: 400, type: "received", person: "علی", timestamp: "2026-07-20T07:00:00.000Z" }),
+  ];
+
+  it("computes this-month and last-month figures separately", () => {
+    const snap = buildFinancialSnapshot(records, NOW);
+    expect(snap.transactionCount).toBe(7);
+    expect(snap.thisMonth).toEqual({ income: 5000, expenses: 1300, savings: 3700 });
+    expect(snap.lastMonth).toEqual({ income: 9000, expenses: 7000, savings: 2000 });
+  });
+
+  it("ranks this month's expense categories, biggest first", () => {
+    const snap = buildFinancialSnapshot(records, NOW);
+    expect(snap.topExpenseCategoriesThisMonth).toEqual([
+      { category: "کھانا", total: 900 },
+      { category: "سفر", total: 400 },
+    ]);
+  });
+
+  it("nets people balances across all months", () => {
+    const snap = buildFinancialSnapshot(records, NOW);
+    expect(snap.peopleBalances).toEqual([{ person: "علی", owesUser: 600 }]);
+    expect(snap.allTime).toEqual({
+      income: 14000,
+      expenses: 8300,
+      given: 1000,
+      received: 400,
+    });
+  });
+
+  it("filterLastMonth rolls the year over in January (PKT boundaries)", () => {
+    const janNow = "2026-01-10T07:00:00.000Z";
+    // 31 Dec 2025 23:59 PKT — inside last month
+    const inDec = tx({ amount: 1, type: "expense", timestamp: "2025-12-31T18:59:00.000Z" });
+    // 1 Jan 2026 00:01 PKT — this month, not last
+    const inJan = tx({ amount: 1, type: "expense", timestamp: "2025-12-31T19:01:00.000Z" });
+    // 30 Nov 2025 PKT — two months back
+    const inNov = tx({ amount: 1, type: "expense", timestamp: "2025-11-30T18:00:00.000Z" });
+    expect(filterLastMonth([inDec, inJan, inNov], janNow)).toEqual([inDec]);
   });
 });

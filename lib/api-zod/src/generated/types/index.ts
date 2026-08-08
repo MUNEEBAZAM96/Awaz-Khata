@@ -8,6 +8,10 @@
 
 export * from './apiError';
 export * from './badRequestResponse';
+export * from './chatAnswer';
+export * from './chatMessage';
+export * from './chatMessageRole';
+export * from './chatRequest';
 export * from './createTransactionResult';
 export * from './extractRequest';
 export * from './extractResult';

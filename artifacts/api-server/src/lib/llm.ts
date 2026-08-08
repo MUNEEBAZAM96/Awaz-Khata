@@ -160,6 +160,102 @@ export class IntentValidationError extends Error {
   }
 }
 
+async function chatCompletion(body: Record<string, unknown>): Promise<string> {
+  const apiKey = process.env["LLM_API_KEY"];
+  if (!apiKey) {
+    throw new Error("LLM_API_KEY is not configured");
+  }
+  const provider = resolveProvider(apiKey);
+
+  const response = await fetch(provider.url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model: provider.model, ...body }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `LLM request failed (${response.status}): ${detail.slice(0, 300)}`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const content = payload.choices?.[0]?.message?.content;
+  if (!content || !content.trim()) {
+    throw new Error("LLM returned an empty response");
+  }
+  return content;
+}
+
+// ---------------------------------------------------------------------------
+// Finance advisor chat
+// ---------------------------------------------------------------------------
+
+const ADVISOR_SYSTEM_PROMPT = `You are the personal finance advisor inside Awaz Khata,
+a Pakistani voice-first personal finance app.
+
+You receive a FINANCIAL SNAPSHOT computed by the app's deterministic finance
+engine from the user's real ledger. All amounts are Pakistani rupees.
+Snapshot fields:
+- transactionCount: total entries in the ledger
+- thisMonth / lastMonth: income, expenses, savings (income minus expenses)
+- topExpenseCategoriesThisMonth: biggest spending categories this month
+- peopleBalances: per person, owesUser > 0 means they owe the user,
+  owesUser < 0 means the user owes them
+- allTime: income, expenses, given, received over the whole ledger
+
+STRICT RULES:
+1. Every number you mention must come from the snapshot. Never invent,
+   estimate, or recompute amounts. You may compare given numbers
+   qualitatively (more / less / roughly half), but never produce new totals.
+2. If the user asks for a figure the snapshot does not contain, say plainly
+   that you don't have that number yet.
+3. Answer in simple spoken Pakistani Urdu (Urdu script only) — like a wise,
+   friendly elder explaining money matters. No English sentences.
+4. 2 to 4 short sentences. Plain text only: no markdown, no lists, no
+   headings, no emojis. Your answer is read aloud by text-to-speech.
+5. Write amounts with plain digits, e.g. "5000 روپے".
+6. Ground the advice in the user's actual figures (e.g. cite this month's
+   savings when they ask about affording something).
+7. Be practical and encouraging, never judgmental about spending.
+8. If the question is not about the user's money, gently steer back to
+   their finances in one sentence.`;
+
+export interface AdvisorTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function adviseOnFinances(
+  question: string,
+  snapshot: unknown,
+  history: AdvisorTurn[],
+): Promise<string> {
+  const content = await chatCompletion({
+    temperature: 0.4,
+    max_tokens: 400,
+    messages: [
+      { role: "system", content: ADVISOR_SYSTEM_PROMPT },
+      {
+        role: "system",
+        content: `FINANCIAL SNAPSHOT (rupees, precomputed by the finance engine):\n${JSON.stringify(snapshot)}`,
+      },
+      ...history.slice(-6).map((turn) => ({
+        role: turn.role,
+        content: turn.content,
+      })),
+      { role: "user", content: question },
+    ],
+  });
+  return content.trim();
+}
+
 export async function extractIntent(text: string): Promise<ExtractedIntent> {
   const apiKey = process.env["LLM_API_KEY"];
   if (!apiKey) {

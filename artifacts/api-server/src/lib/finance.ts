@@ -208,6 +208,72 @@ export function confirmationFor(t: {
 const PERSON_NOT_FOUND = (person: string) =>
   `${person} کا کوئی حساب نہیں ملا۔`;
 
+// ---------------------------------------------------------------------------
+// Financial snapshot for the AI advisor.
+// The advisor LLM receives ONLY these precomputed figures — it never
+// calculates. All numbers below come from the same deterministic engine
+// that answers structured queries.
+// ---------------------------------------------------------------------------
+
+export interface MonthFigures {
+  income: number;
+  expenses: number;
+  savings: number;
+}
+
+export interface FinancialSnapshot {
+  transactionCount: number;
+  thisMonth: MonthFigures;
+  lastMonth: MonthFigures;
+  topExpenseCategoriesThisMonth: { category: string; total: number }[];
+  peopleBalances: { person: string; owesUser: number }[];
+  allTime: Totals;
+}
+
+function monthFigures(records: TransactionRecord[]): MonthFigures {
+  const totals = summarize(records);
+  return {
+    income: totals.income,
+    expenses: totals.expenses,
+    savings: totals.income - totals.expenses,
+  };
+}
+
+/** Records that fall in the previous PKT calendar month (with year rollover). */
+export function filterLastMonth(
+  records: TransactionRecord[],
+  nowIso = new Date().toISOString(),
+): TransactionRecord[] {
+  const now = pktParts(nowIso);
+  const lastMonth = now.m === 0 ? 11 : now.m - 1;
+  const lastMonthYear = now.m === 0 ? now.y - 1 : now.y;
+  return records.filter((r) => {
+    const ts = pktParts(r.timestamp);
+    return ts.y === lastMonthYear && ts.m === lastMonth;
+  });
+}
+
+export function buildFinancialSnapshot(
+  records: TransactionRecord[],
+  nowIso = new Date().toISOString(),
+): FinancialSnapshot {
+  const thisMonthRecords = filterByPeriod(records, "this_month", nowIso);
+  const topCategories = [...categoryTotals(thisMonthRecords).entries()]
+    .map(([category, total]) => ({ category, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+  return {
+    transactionCount: records.length,
+    thisMonth: monthFigures(thisMonthRecords),
+    lastMonth: monthFigures(filterLastMonth(records, nowIso)),
+    topExpenseCategoriesThisMonth: topCategories,
+    peopleBalances: allPeople(records)
+      .slice(0, 8)
+      .map(({ person, balance }) => ({ person, owesUser: balance })),
+    allTime: summarize(records),
+  };
+}
+
 export function runFinanceQuery(
   records: TransactionRecord[],
   query: FinanceQuery,

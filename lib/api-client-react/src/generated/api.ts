@@ -21,6 +21,8 @@ import type {
 
 import type {
   BadRequestResponse,
+  ChatAnswer,
+  ChatRequest,
   CreateTransactionResult,
   ExtractRequest,
   ExtractResult,
@@ -581,6 +583,78 @@ export function useGetPersonLedger<TData = Awaited<ReturnType<typeof getPersonLe
 
 
 
+
+export const getAskAdvisorUrl = () => {
+
+
+
+
+  return `/api/chat`
+}
+
+/**
+ * The backend computes a financial snapshot with the deterministic finance engine (this month / last month income, expenses, savings, top categories, people balances, all-time totals) and passes only those precomputed figures plus the question and recent turns to the LLM. The LLM never calculates.
+ * @summary Ask the AI finance advisor a question grounded in real ledger figures
+ */
+export const askAdvisor = async (chatRequest: ChatRequest, options?: Parameters<typeof customFetch>[1]): Promise<ChatAnswer> => {
+
+  return customFetch<ChatAnswer>(getAskAdvisorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(chatRequest)
+  }
+);}
+
+
+
+
+
+export const getAskAdvisorMutationOptions = <TError = ErrorType<BadRequestResponse | UpstreamErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askAdvisor>>, TError,{data: BodyType<ChatRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof askAdvisor>>, TError,{data: BodyType<ChatRequest>}, TContext> => {
+
+const mutationKey = ['askAdvisor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askAdvisor>>, {data: BodyType<ChatRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  askAdvisor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AskAdvisorMutationResult = NonNullable<Awaited<ReturnType<typeof askAdvisor>>>
+    export type AskAdvisorMutationBody = BodyType<ChatRequest>
+    export type AskAdvisorMutationError = ErrorType<BadRequestResponse | UpstreamErrorResponse>
+
+    /**
+ * @summary Ask the AI finance advisor a question grounded in real ledger figures
+ */
+export const useAskAdvisor = <TError = ErrorType<BadRequestResponse | UpstreamErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askAdvisor>>, TError,{data: BodyType<ChatRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof askAdvisor>>,
+        TError,
+        {data: BodyType<ChatRequest>},
+        TContext
+      > => {
+      return useMutation(getAskAdvisorMutationOptions(options));
+    }
 
 export const getRunQueryUrl = () => {
 

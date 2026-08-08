@@ -138,6 +138,29 @@ export const GetPersonLedgerResponse = zod.object({
 
 
 /**
+ * The backend computes a financial snapshot with the deterministic finance engine (this month / last month income, expenses, savings, top categories, people balances, all-time totals) and passes only those precomputed figures plus the question and recent turns to the LLM. The LLM never calculates.
+ * @summary Ask the AI finance advisor a question grounded in real ledger figures
+ */
+export const askAdvisorBodyMessageMax = 1000;
+
+export const askAdvisorBodyHistoryMax = 12;
+
+
+
+export const AskAdvisorBody = zod.object({
+  "message": zod.string().min(1).max(askAdvisorBodyMessageMax).describe('The user\'s open-ended finance question (Urdu \/ Roman Urdu \/ English)'),
+  "history": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string()
+})).max(askAdvisorBodyHistoryMax).optional().describe('Recent conversation turns, oldest first')
+})
+
+export const AskAdvisorResponse = zod.object({
+  "answer": zod.string().describe('Grounded financial advice in simple spoken Urdu')
+})
+
+
+/**
  * @summary Run a structured financial query through the finance engine
  */
 export const RunQueryBody = zod.object({
