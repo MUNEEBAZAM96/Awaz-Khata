@@ -1,0 +1,1357 @@
+# UPDATE EXISTING PROJECT — آواز کھاتہ (Awaz Khata)
+
+The existing **Awaz Khata** project is already working correctly.
+
+**IMPORTANT: DO NOT rebuild the project from scratch.**
+
+Do not replace the existing architecture, backend, Uplift AI integration, Groq integration, transaction storage, or working voice pipeline unless absolutely necessary.
+
+The current core flow is already working:
+
+**User speaks → Uplift STT → Groq understands → transaction/query processed → Uplift TTS → user hears response**
+
+Your job now is to **upgrade the existing application** and make it feel like a polished, hackathon-winning voice-first personal finance assistant.
+
+The focus of this update is:
+
+1. Better UI/UX
+2. Bottom tab navigation
+3. Better voice interaction
+4. Conversational Urdu voice confirmations
+5. Calendar-based transaction history
+6. Better transaction/activity experience
+7. Better visual feedback while the app is listening/processing/speaking
+8. Keep everything simple and reliable for a live hackathon demo
+
+---
+
+# PRODUCT IDENTITY
+
+## App Name
+
+**آواز کھاتہ**
+
+## Tagline
+
+**اپنے پیسوں کا حساب، بس بول کر۔**
+
+The app should feel like:
+
+> **A voice-first personal finance assistant made specifically for Pakistan.**
+
+It should NOT feel like a generic expense tracker with a microphone added to it.
+
+The microphone and voice interaction should remain the heart of the application.
+
+---
+
+# IMPORTANT — PRESERVE EXISTING FUNCTIONALITY
+
+Before making changes:
+
+1. Inspect the existing frontend.
+2. Inspect the existing backend.
+3. Understand the current voice pipeline.
+4. Understand the existing transaction model.
+5. Understand the existing API service.
+6. Understand the current Uplift AI integration.
+7. Understand the current Groq integration.
+
+Then make incremental changes.
+
+Do NOT:
+
+* rewrite the entire project
+* change working APIs unnecessarily
+* replace Uplift AI
+* replace Groq
+* introduce a database
+* add unnecessary dependencies
+* break the existing voice recording
+* break the existing TTS playback
+* break transaction storage
+
+If an existing component already performs the required functionality, improve it instead of replacing it.
+
+---
+
+# 1. NEW PRIMARY VOICE EXPERIENCE
+
+The biggest improvement is to make the voice interaction feel like a real conversation.
+
+Currently the user:
+
+**speaks → app processes → app responds**
+
+Upgrade this so the experience feels like:
+
+### User
+
+> "میں نے علی کو دو ہزار روپے دیے۔"
+
+### App listens
+
+> **"سن رہا ہوں..."**
+
+Then after recording finishes:
+
+### App should speak:
+
+> **"جی، میں نے سن لیا۔"**
+
+Then process the transaction.
+
+After successfully saving:
+
+> **"اور کھاتے میں ڈال دیا ہے۔"**
+
+Or combine them naturally:
+
+> **"جی، میں نے سن لیا اور کھاتے میں ڈال دیا ہے۔"**
+
+The exact wording can vary naturally.
+
+The important thing is that the user should receive **immediate voice acknowledgment** after speaking.
+
+---
+
+# 2. VOICE CONVERSATION STATES
+
+Implement a clear state machine:
+
+```ts
+type VoiceState =
+  | "idle"
+  | "listening"
+  | "acknowledging"
+  | "processing"
+  | "speaking"
+  | "error";
+```
+
+### IDLE
+
+Display:
+
+> **بولنے کے لیے دبائیں**
+
+### LISTENING
+
+Display:
+
+> **سن رہا ہوں...**
+
+Animate the microphone subtly.
+
+### ACKNOWLEDGING
+
+Immediately after recording stops:
+
+The app should speak a short acknowledgement such as:
+
+> **"جی، میں نے سن لیا۔"**
+
+This should happen quickly.
+
+### PROCESSING
+
+Display:
+
+> **آپ کی بات سمجھ رہا ہوں...**
+
+### SAVING
+
+Display:
+
+> **کھاتے میں شامل کر رہا ہوں...**
+
+### SPEAKING
+
+Display:
+
+> **جواب دے رہا ہوں...**
+
+### ERROR
+
+Display:
+
+> **معذرت، میں سمجھ نہیں سکا۔ دوبارہ بولیں۔**
+
+Then automatically return to:
+
+```text
+idle
+```
+
+---
+
+# 3. IMPORTANT — DO NOT DELAY THE ACKNOWLEDGEMENT
+
+The acknowledgement should make the experience feel conversational.
+
+The flow should become:
+
+```text
+USER SPEAKS
+      ↓
+RECORDING STOPS
+      ↓
+"جی، میں نے سن لیا۔"
+      ↓
+STT
+      ↓
+GROQ
+      ↓
+FINANCE ENGINE
+      ↓
+"اور کھاتے میں ڈال دیا ہے۔"
+```
+
+However, avoid making the user wait unnecessarily.
+
+If possible, play the acknowledgement immediately while the backend processing happens in parallel.
+
+For example:
+
+```text
+Recording stopped
+       ↓
+Immediately play:
+"جی، میں نے سن لیا۔"
+       ↓
+Meanwhile:
+Uplift STT
+       ↓
+Groq
+       ↓
+Finance engine
+       ↓
+Final response
+```
+
+This is important for the live demo.
+
+---
+
+# 4. NATURAL URDU VOICE SENTENCES
+
+Create deterministic response templates for common operations.
+
+Do NOT ask Groq to generate these basic confirmations.
+
+Examples:
+
+### Expense
+
+User:
+
+> "میں نے آج آٹھ سو روپے پٹرول پر خرچ کیے۔"
+
+App:
+
+> **"جی، میں نے سن لیا اور آٹھ سو روپے پٹرول کے خرچے میں ڈال دیے ہیں۔"**
+
+---
+
+### Given
+
+User:
+
+> "میں نے علی کو دو ہزار روپے دیے۔"
+
+App:
+
+> **"جی، میں نے سن لیا اور دو ہزار روپے علی کے کھاتے میں ڈال دیے ہیں۔"**
+
+---
+
+### Received
+
+User:
+
+> "علی نے پانچ سو روپے واپس کیے۔"
+
+App:
+
+> **"جی، میں نے سن لیا اور پانچ سو روپے واپس کھاتے میں شامل کر دیے ہیں۔"**
+
+---
+
+### Income
+
+User:
+
+> "مجھے آج دس ہزار روپے ملے۔"
+
+App:
+
+> **"جی، میں نے سن لیا اور دس ہزار روپے آمدن میں شامل کر دیے ہیں۔"**
+
+---
+
+### Query
+
+User:
+
+> "میں نے آج کتنے پیسے خرچ کیے؟"
+
+App:
+
+> **"آپ نے آج دو ہزار آٹھ سو روپے خرچ کیے ہیں۔"**
+
+---
+
+### Person balance
+
+User:
+
+> "علی کے کتنے پیسے باقی ہیں؟"
+
+App:
+
+> **"علی کے ذمے ابھی تین ہزار روپے ہیں۔"**
+
+---
+
+# 5. SUPPORT MULTIPLE NATURAL PHRASES
+
+Do not force users to speak specific commands.
+
+The system should continue understanding natural Urdu, Roman Urdu, English, and mixed language.
+
+Examples:
+
+> "آج کھانے پہ پانچ سو خرچ ہوئے۔"
+
+> "میں نے احمد کو 3000 دیے۔"
+
+> "Ahmed ne mujhe 1000 wapis kiye."
+
+> "How much did I spend today?"
+
+> "Is month mera sab se zyada kharcha kis cheez pe hua?"
+
+The existing Groq intent extraction should continue handling this.
+
+---
+
+# 6. ADD BOTTOM TAB BAR
+
+Add a beautiful modern bottom tab bar.
+
+Use **Expo Router tabs**.
+
+The main tabs should be:
+
+```text
+🏠 گھر
+📅 کیلنڈر
+📊 حساب
+```
+
+Keep the number of tabs small.
+
+Do NOT create 5–6 unnecessary tabs.
+
+---
+
+# 7. HOME TAB
+
+Route:
+
+```text
+/
+```
+
+This is the primary voice screen.
+
+The home screen should contain:
+
+### Header
+
+```text
+آواز کھاتہ
+
+اپنے پیسوں کا حساب،
+بس بول کر۔
+```
+
+Optionally show a small greeting:
+
+> **السلام علیکم 👋**
+
+Do not make the header too large.
+
+---
+
+# 8. TODAY'S FINANCIAL SUMMARY
+
+Near the top of Home:
+
+```text
+آج کا حساب
+
+خرچ
+Rs. 2,850
+
+آمدن
+Rs. 10,000
+```
+
+Keep this compact.
+
+Do not turn the dashboard into a complicated financial analytics screen.
+
+The microphone should remain the primary focus.
+
+---
+
+# 9. HERO MICROPHONE
+
+Make the microphone the most visually important element.
+
+Use a large circular microphone button.
+
+Example layout:
+
+```text
+              آواز کھاتہ
+
+          آج کا حساب
+       Rs. 2,850 خرچ
+
+              🎙️
+
+          سن رہا ہوں...
+
+      اپنی بات بولیں
+```
+
+Use subtle animations:
+
+### Idle
+
+Gentle breathing/pulse.
+
+### Listening
+
+Soft expanding ring.
+
+### Processing
+
+Small animated indicator.
+
+### Speaking
+
+Soft pulsing animation.
+
+Do not use excessive animation.
+
+It should remain professional.
+
+---
+
+# 10. VOICE FEEDBACK VISUALIZATION
+
+When listening, show an animated audio-style visualization around the microphone.
+
+Example:
+
+```text
+       ·  ·  ◉  ·  ·
+         ◉  🎙️  ◉
+       ·  ◉  ◉  ·
+```
+
+It does not need to be a real waveform.
+
+A lightweight animated visualization is enough.
+
+The user should immediately understand:
+
+> "The app is listening to me."
+
+---
+
+# 11. RECENT ACTIVITY
+
+Below the microphone show:
+
+## حالیہ حساب
+
+Display the latest 3–5 transactions.
+
+Example:
+
+```text
+حال ہی کا حساب
+
+پٹرول                         - Rs. 800
+آج · 10:32 AM
+
+علی کو دیے                  - Rs. 2,000
+آج · 09:15 AM
+
+تنخواہ                       + Rs. 50,000
+کل · 06:20 PM
+```
+
+Use clear positive/negative visual treatment.
+
+Do not use huge cards.
+
+Use clean rows/dividers.
+
+---
+
+# 12. TRANSACTION ROW DESIGN
+
+Each transaction row should contain:
+
+* icon
+* title
+* optional person/category
+* time/date
+* amount
+* transaction type
+
+Example:
+
+```text
+⛽  پٹرول
+    آج · 10:32
+
+              - Rs. 800
+```
+
+For given:
+
+```text
+👤  علی کو دیے
+    آج · 09:15
+
+              Rs. 2,000
+```
+
+For received:
+
+```text
+↩️  علی سے واپس
+    آج · 08:40
+
+              + Rs. 500
+```
+
+Keep the interface clean.
+
+---
+
+# 13. CALENDAR TAB
+
+Create a dedicated Calendar screen.
+
+Route:
+
+```text
+/calendar
+```
+
+Title:
+
+> **کیلنڈر**
+
+Subtitle:
+
+> **اپنے پیسوں کا روزانہ حساب دیکھیں**
+
+Use a calendar UI.
+
+The user should be able to select a date.
+
+Example:
+
+```text
+        اگست 2026
+
+د   پ   چ   ب   ج   ج   ش
+
+                1   2
+
+3   4   5   6   7   8   9
+
+10  11  12  13  14  15  16
+
+...
+```
+
+Do not overcomplicate the calendar.
+
+---
+
+# 14. CALENDAR TRANSACTION VIEW
+
+When a date is selected, show the transactions for that day.
+
+Example:
+
+```text
+8 اگست
+
+آج کا حساب
+
+خرچ
+Rs. 2,800
+
+آمدن
+Rs. 10,000
+
+
+تفصیل
+
+⛽ پٹرول
+Rs. 800
+
+🍔 کھانا
+Rs. 500
+
+👤 علی کو دیے
+Rs. 1,500
+```
+
+The user should be able to understand their financial activity for a particular day.
+
+---
+
+# 15. CALENDAR INDICATORS
+
+Show a small indicator underneath dates that contain transactions.
+
+For example:
+
+```text
+8  •
+```
+
+or
+
+```text
+8  ●
+```
+
+The indicator should mean:
+
+> This day contains financial activity.
+
+Do not make the calendar visually crowded.
+
+---
+
+# 16. CALENDAR + VOICE
+
+Make the Calendar work with the voice assistant.
+
+Examples:
+
+User says:
+
+> "آج میں نے کیا کیا خرچ کیا؟"
+
+The app should calculate today's transactions.
+
+User says:
+
+> "کل میں نے کتنا خرچ کیا تھا؟"
+
+The app should query yesterday.
+
+User says:
+
+> "پچھلے مہینے کی سب سے زیادہ خرچ والی تاریخ کون سی تھی؟"
+
+If the existing finance engine can support it, calculate it.
+
+Do not add complicated analytics unless reliable.
+
+---
+
+# 17. ACCOUNT / LEDGER TAB
+
+Create:
+
+```text
+/ledger
+```
+
+Title:
+
+> **میرا حساب**
+
+Show high-level financial summary.
+
+Example:
+
+```text
+اس مہینے
+
+آمدن
+Rs. 85,000
+
+خرچ
+Rs. 42,500
+
+دوسروں کو دیے
+Rs. 12,000
+
+واپس آئے
+Rs. 5,000
+```
+
+Then:
+
+```text
+لوگوں کا حساب
+
+علی                     Rs. 3,000
+احمد                    Rs. 1,500
+حسن                     Rs. 0
+```
+
+---
+
+# 18. PERSON BALANCE COLORS
+
+For person balances:
+
+### Positive amount owed to user
+
+Use a clear red/warning visual.
+
+Example:
+
+```text
+علی                 Rs. 3,000
+```
+
+Meaning:
+
+> Ali still owes the user.
+
+### Settled
+
+Use green.
+
+```text
+حسن                    Rs. 0
+```
+
+Do not use colors as the only indication. Keep text/icons understandable.
+
+---
+
+# 19. LEDGER DETAIL
+
+When the user taps a person, show:
+
+```text
+علی
+
+باقی رقم
+Rs. 3,000
+
+دیا
+Rs. 5,000
+
+واپس آیا
+Rs. 2,000
+
+تفصیل
+
+2 Aug
++ Rs. 2,000 دیا
+
+5 Aug
+- Rs. 500 واپس
+
+8 Aug
++ Rs. 3,000 دیا
+```
+
+Keep this simple.
+
+---
+
+# 20. TAB BAR DESIGN
+
+The bottom tab bar should feel premium but minimal.
+
+Example:
+
+```text
+────────────────────────────
+
+   🏠          📅          📊
+   گھر       کیلنڈر       حساب
+
+────────────────────────────
+```
+
+Use:
+
+* rounded top corners
+* subtle border/shadow
+* large icons
+* selected tab indicator
+* Urdu labels
+* proper safe area handling
+
+Make sure the microphone screen does not feel crowded by the tab bar.
+
+---
+
+# 21. RTL CONSIDERATIONS
+
+The app is Urdu-first.
+
+Use:
+
+```text
+text-right
+```
+
+for Urdu text.
+
+Support RTL-friendly layouts.
+
+However, do not force RTL onto UI elements where it makes the interaction worse.
+
+Numbers such as:
+
+```text
+Rs. 2,500
+```
+
+can remain visually clear.
+
+Person names can remain natural.
+
+---
+
+# 22. UI DESIGN UPGRADE
+
+Make the entire application significantly more polished.
+
+Use a consistent visual system:
+
+### Typography
+
+Large Urdu headings.
+
+Readable body text.
+
+Clear hierarchy.
+
+### Spacing
+
+Generous padding.
+
+Minimum 44px touch targets.
+
+### Components
+
+Reusable:
+
+```text
+VoiceButton
+VoiceStatus
+SummaryCard
+TransactionRow
+PersonRow
+CalendarDay
+TabBar
+```
+
+### Visual style
+
+Use:
+
+* clean surfaces
+* subtle borders
+* rounded corners where appropriate
+* strong contrast
+* restrained shadows
+* minimal gradients
+* smooth micro-interactions
+
+Do not make it look like a generic SaaS dashboard.
+
+It should feel like a modern Pakistani mobile finance app.
+
+---
+
+# 23. EMPTY STATES
+
+If there are no transactions:
+
+Home:
+
+> **ابھی کوئی حساب نہیں**
+
+> **اپنی پہلی بات بول کر شروع کریں۔**
+
+Calendar:
+
+> **اس دن کوئی لین دین نہیں ہوا۔**
+
+Ledger:
+
+> **ابھی کھاتے میں کوئی رقم نہیں۔**
+
+Make empty states friendly.
+
+---
+
+# 24. LOADING STATES
+
+Never show a blank screen.
+
+During backend processing:
+
+```text
+سمجھ رہا ہوں...
+```
+
+During TTS:
+
+```text
+جواب دے رہا ہوں...
+```
+
+Use subtle animation.
+
+---
+
+# 25. ERROR EXPERIENCE
+
+If microphone permission is denied:
+
+> **مائیکروفون کی اجازت چاہیے۔**
+
+If speech recognition fails:
+
+> **آواز سمجھ نہیں آئی، دوبارہ بولیں۔**
+
+If backend fails:
+
+> **کنکشن میں مسئلہ ہے، دوبارہ کوشش کریں۔**
+
+If transaction cannot be saved:
+
+> **حساب محفوظ نہیں ہو سکا۔**
+
+After errors:
+
+```text
+state → idle
+```
+
+Never leave the app stuck.
+
+---
+
+# 26. VOICE ACKNOWLEDGEMENT ARCHITECTURE
+
+Implement the new acknowledgement without breaking the existing pipeline.
+
+Recommended architecture:
+
+```text
+recording stops
+       ↓
+set state = acknowledging
+       ↓
+play short acknowledgement
+       ↓
+START transcription request
+       ↓
+Groq extraction
+       ↓
+finance operation
+       ↓
+generate final response
+       ↓
+play final response
+       ↓
+idle
+```
+
+For example:
+
+```text
+User:
+"میں نے علی کو دو ہزار روپے دیے۔"
+
+App:
+"جی، میں نے سن لیا۔"
+
+[processing]
+
+App:
+"اور دو ہزار روپے علی کے کھاتے میں ڈال دیے ہیں۔"
+```
+
+This should make the app feel much more human.
+
+---
+
+# 27. DIFFERENT ACKNOWLEDGEMENT SENTENCES
+
+Do not always use exactly the same acknowledgement if easy to implement.
+
+Create a small deterministic set:
+
+```text
+جی، میں نے سن لیا۔
+
+جی، بات سمجھ آگئی۔
+
+ٹھیک ہے، میں نے سن لیا۔
+
+جی، اسے کھاتے میں شامل کر رہا ہوں۔
+
+ٹھیک ہے، حساب میں ڈال دیا۔
+```
+
+However, do NOT randomly use a confirmation that implies success before the transaction has actually been saved.
+
+Important distinction:
+
+### Before processing:
+
+> "جی، میں نے سن لیا۔"
+
+### After successful save:
+
+> "اور کھاتے میں ڈال دیا ہے۔"
+
+Never say:
+
+> "کھاتے میں ڈال دیا ہے"
+
+before the backend confirms the transaction was saved.
+
+---
+
+# 28. QUERY CONVERSATION
+
+For queries, do not say "کھاتے میں ڈال دیا".
+
+Example:
+
+User:
+
+> "علی کے کتنے پیسے باقی ہیں؟"
+
+App:
+
+> "جی، میں نے حساب دیکھ لیا۔ علی کے ذمے ابھی تین ہزار روپے ہیں۔"
+
+This creates a natural conversational experience.
+
+---
+
+# 29. MAKE THE APP FEEL LIKE A VOICE ASSISTANT
+
+The UI should communicate:
+
+**Talk to your money.**
+
+Not:
+
+**Fill in a financial form.**
+
+Avoid adding manual transaction forms unless they already exist and are necessary.
+
+The primary action should always be:
+
+🎙️ **Speak**
+
+---
+
+# 30. DEMO-FIRST OPTIMIZATION
+
+This is for a live hackathon.
+
+The following demo must look extremely polished:
+
+### Demo 1
+
+Say:
+
+> "میں نے آج علی کو دو ہزار روپے دیے۔"
+
+App:
+
+> "جی، میں نے سن لیا۔"
+
+Then:
+
+> "اور دو ہزار روپے علی کے کھاتے میں ڈال دیے ہیں۔"
+
+The transaction immediately appears on Home.
+
+---
+
+### Demo 2
+
+Say:
+
+> "علی نے پانچ سو روپے واپس کیے۔"
+
+App:
+
+> "جی، میں نے سن لیا۔"
+
+Then:
+
+> "اور پانچ سو روپے واپس کھاتے میں شامل کر دیے ہیں۔"
+
+---
+
+### Demo 3
+
+Say:
+
+> "علی کے کتنے پیسے باقی ہیں؟"
+
+App:
+
+> "جی، میں نے حساب دیکھ لیا۔ علی کے ذمے ابھی پندرہ سو روپے ہیں۔"
+
+---
+
+### Demo 4
+
+Open Calendar.
+
+Tap today's date.
+
+Show the transactions.
+
+This should visually demonstrate that the voice interactions are becoming a persistent financial record.
+
+---
+
+# 31. PERFORMANCE
+
+Keep the application fast.
+
+Avoid unnecessary API calls.
+
+Avoid unnecessary rerenders.
+
+Do not fetch the entire transaction dataset repeatedly after every small UI update if the existing architecture can be improved with targeted refreshes.
+
+However, prioritize reliability over premature optimization.
+
+---
+
+# 32. DEPENDENCY RULE
+
+Before installing anything:
+
+Check the existing Expo SDK version.
+
+Use dependency versions compatible with the existing Expo SDK.
+
+Do NOT upgrade Expo just for UI features.
+
+Do NOT break the current working audio implementation.
+
+If a calendar library is needed, choose one compatible with the installed Expo/React Native version.
+
+If a feature can be implemented with existing packages, prefer that.
+
+---
+
+# 33. BACKEND CHANGES
+
+Only add backend functionality where required.
+
+Possible additions:
+
+```text
+GET /api/transactions/date/:date
+GET /api/summary
+GET /api/people
+```
+
+But reuse existing endpoints where possible.
+
+Do not duplicate existing functionality.
+
+The backend remains the source of truth for:
+
+* transactions
+* balances
+* calculations
+* summaries
+
+---
+
+# 34. DATA MODEL
+
+Do not break the existing transaction schema.
+
+If the current model already contains:
+
+```text
+id
+amount
+type
+person
+category
+description
+timestamp
+```
+
+continue using it.
+
+Only add fields if they are genuinely required.
+
+---
+
+# 35. FINAL UI STRUCTURE
+
+The finished app should roughly feel like:
+
+```text
+┌─────────────────────────────┐
+│                             │
+│       آواز کھاتہ            │
+│  اپنے پیسوں کا حساب،        │
+│       بس بول کر۔            │
+│                             │
+│        آج کا حساب           │
+│        Rs. 2,850            │
+│                             │
+│          ◉ 🎙️ ◉             │
+│                             │
+│       بولنے کے لیے دبائیں   │
+│                             │
+│      حالیہ حساب             │
+│                             │
+│  ⛽ پٹرول        - Rs. 800  │
+│  👤 علی          - Rs. 2k   │
+│  🍔 کھانا        - Rs. 500  │
+│                             │
+├─────────────────────────────┤
+│   🏠        📅        📊    │
+│   گھر      کیلنڈر      حساب │
+└─────────────────────────────┘
+```
+
+---
+
+# 36. FINAL UX PRINCIPLE
+
+The complete experience should feel like:
+
+**Speak → Hear acknowledgement → Understand → Save → Hear confirmation → See it appear**
+
+For example:
+
+```text
+User:
+"میں نے علی کو دو ہزار روپے دیے۔"
+
+        ↓
+
+App:
+"جی، میں نے سن لیا۔"
+
+        ↓
+
+Uplift STT
+
+        ↓
+
+Groq
+
+        ↓
+
+Finance Engine
+
+        ↓
+
+JSON storage
+
+        ↓
+
+App:
+"اور دو ہزار روپے علی کے کھاتے میں ڈال دیے ہیں۔"
+
+        ↓
+
+Home updates:
+
+علی کو دیے
+Rs. 2,000
+```
+
+That is the experience we want.
+
+---
+
+# 37. DEFINITION OF DONE
+
+This update is complete only when:
+
+* Existing voice functionality still works.
+* Uplift STT still works.
+* Groq extraction still works.
+* Uplift TTS still works.
+* Transactions are still correctly saved.
+* Financial calculations remain correct.
+* Voice acknowledgement works.
+* Final Urdu confirmation works.
+* Home UI is significantly improved.
+* Bottom tab bar works.
+* Calendar works.
+* Calendar shows transaction activity.
+* Ledger/account screen works.
+* Person balances work.
+* Recent activity updates after voice transactions.
+* Listening/processing/speaking states are visually clear.
+* Urdu RTL experience is polished.
+* No API keys are exposed in the frontend.
+* No unnecessary dependencies or architecture changes are introduced.
+* The entire demo can be performed reliably from the microphone.
+
+---
+
+# MOST IMPORTANT INSTRUCTION
+
+**Do not rebuild what is already working.**
+
+First inspect the existing codebase and preserve the existing functionality.
+
+Then implement these upgrades incrementally.
+
+The priority order is:
+
+1. **Do not break the existing voice pipeline**
+2. **Improve voice conversation UX**
+3. **Add acknowledgement + confirmation**
+4. **Improve Home UI**
+5. **Add bottom tabs**
+6. **Add Calendar**
+7. **Improve Ledger**
+8. **Add subtle animations**
+9. **Polish the visual design**
+10. **Test the complete live demo**
+
+The final result should feel like a polished product:
+
+> **آواز کھاتہ — پاکستان کا اپنا Voice-First Personal Finance Assistant**
+
+**Speak your expense. Speak your debt. Ask about your money. The app remembers everything.**

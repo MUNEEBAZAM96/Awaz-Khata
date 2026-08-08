@@ -1,1 +1,2 @@
 - [api-zod barrel collision](api-zod-barrel-collision.md) — orval codegen overwrites the barrel and reintroduces a const/type name collision for multipart endpoints; re-fix with explicit exports after every codegen.
+- [Awaz Khata product spec](awaz-khata-product-spec.md) — user spec forbids adding a database; spoken save confirmations use conversational «جی، میں نے سن لیا اور …» wording built only after save.

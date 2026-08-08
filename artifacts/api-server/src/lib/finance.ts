@@ -184,18 +184,24 @@ export function confirmationFor(t: {
   category?: string | null;
   description?: string | null;
 }): string {
+  // Conversational combined form per the product spec: acknowledgement +
+  // explicit "saved to the ledger" confirmation in one sentence. Only built
+  // AFTER the transaction is stored — never implies success early. If a
+  // client-side spoken acknowledgement is added later, split the «جی، میں نے
+  // سن لیا اور» prefix out of these templates.
   const label = t.description?.trim() || t.category?.trim() || "";
+  const ACK = "جی، میں نے سن لیا اور";
   switch (t.type) {
     case "expense":
       return label
-        ? `${rupees(t.amount)} ${label} کے خرچے میں شامل کر دیے ہیں۔`
-        : `${rupees(t.amount)} خرچے میں شامل کر دیے ہیں۔`;
+        ? `${ACK} ${rupees(t.amount)} ${label} کے خرچے میں ڈال دیے ہیں۔`
+        : `${ACK} ${rupees(t.amount)} خرچے میں ڈال دیے ہیں۔`;
     case "income":
-      return `${rupees(t.amount)} آمدن میں شامل کر دیے ہیں۔`;
+      return `${ACK} ${rupees(t.amount)} آمدن میں شامل کر دیے ہیں۔`;
     case "given":
-      return `${t.person} کو ${rupees(t.amount)} دے دیے گئے ہیں۔`;
+      return `${ACK} ${rupees(t.amount)} ${t.person} کے کھاتے میں ڈال دیے ہیں۔`;
     case "received":
-      return `${t.person} سے ${rupees(t.amount)} واپس مل گئے ہیں۔`;
+      return `${ACK} ${t.person} سے ${rupees(t.amount)} واپس کھاتے میں شامل کر دیے ہیں۔`;
   }
 }
 
