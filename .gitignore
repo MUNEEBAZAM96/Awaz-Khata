@@ -40,6 +40,8 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
+# macOS AppleDouble sidecars, created when the repo lives on exFAT/network volumes
+._*
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
@@ -50,3 +52,8 @@ Thumbs.db
 
 # runtime ledger data (Awaz Khata)
 artifacts/api-server/data/
+
+# local secrets — on Replit these come from Secrets, never from a file
+.env
+.env.*
+!.env.example

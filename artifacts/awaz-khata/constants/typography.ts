@@ -1,27 +1,16 @@
 /**
- * Awaz Khata typography.
+ * Compatibility re-export.
  *
- * Urdu text renders in Noto Nastaliq Urdu — the calligraphic style Pakistani
- * readers expect ("designed for Pakistan, not translated"). Nastaliq hangs
- * deep below the baseline, so every Urdu style must pair a generous
- * lineHeight (~2× fontSize) or glyphs clip, especially on Android.
+ * The typography system now lives in `@/theme/typography`, where font family
+ * and line height are resolved per script and per user text-size preference.
+ * This file remains so preserved components (the advisor chat, the welcome
+ * intro) keep compiling against the original import path.
  *
- * Amounts, digits, and Latin fragments use Inter with tabular figures.
+ * @deprecated Import from `@/theme/typography`, or use `useTheme().text(variant)`.
  */
-
-export const fonts = {
-  /** Urdu body text */
-  urdu: 'NotoNastaliqUrdu_400Regular',
-  /** Urdu labels with mild emphasis */
-  urduMedium: 'NotoNastaliqUrdu_500Medium',
-  /** Urdu headings */
-  urduBold: 'NotoNastaliqUrdu_700Bold',
-  /** Numbers / Latin text */
-  number: 'Inter_400Regular',
-  numberMedium: 'Inter_500Medium',
-  numberSemiBold: 'Inter_600SemiBold',
-  numberBold: 'Inter_700Bold',
-} as const;
+export { fonts } from '@/theme/typography';
+import { lineHeightFor } from '@/theme/typography';
 
 /** Line height that keeps Nastaliq ascenders/descenders from clipping. */
-export const urduLine = (fontSize: number): number => Math.round(fontSize * 2);
+export const urduLine = (fontSize: number): number =>
+  lineHeightFor('nastaliq', fontSize);

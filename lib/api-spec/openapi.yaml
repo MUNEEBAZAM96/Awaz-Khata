@@ -122,6 +122,52 @@ paths:
               schema:
                 $ref: "#/components/schemas/TransactionsList"
 
+  /transactions/{id}:
+    patch:
+      operationId: updateTransaction
+      summary: Correct a saved transaction (e.g. a misheard amount or person)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionPatch"
+      responses:
+        "200":
+          description: The updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateTransactionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteTransaction
+      summary: Remove a transaction from the ledger
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deletion confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteTransactionResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /transactions/person/{person}:
     get:
       operationId: getPersonLedger
@@ -306,6 +352,45 @@ components:
           type: string
           nullable: true
 
+    TransactionPatch:
+      type: object
+      description: >
+        Partial edit. Only the supplied fields change. `id` and `timestamp`
+        are immutable: re-dating a transaction would silently change what
+        every period query reports.
+      properties:
+        amount:
+          type: number
+          description: Rupee amount (positive)
+        type:
+          type: string
+          enum: [expense, income, given, received]
+        person:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    UpdateTransactionResult:
+      type: object
+      required: [transaction]
+      properties:
+        transaction:
+          $ref: "#/components/schemas/Transaction"
+
+    DeleteTransactionResult:
+      type: object
+      required: [deleted, id]
+      properties:
+        deleted:
+          type: boolean
+        id:
+          type: string
+
     Transaction:
       type: object
       required: [id, amount, type, person, category, description, timestamp]
@@ -342,7 +427,7 @@ components:
 
     Summary:
       type: object
-      required: [income, expenses, given, received]
+      required: [income, expenses, given, received, balance]
       properties:
         income:
           type: number
@@ -352,6 +437,11 @@ components:
           type: number
         received:
           type: number
+        balance:
+          type: number
+          description: >
+            Money on hand: income - expenses - given + received. Computed by
+            the finance engine so the client never derives a figure itself.
 
     TransactionsList:
       type: object

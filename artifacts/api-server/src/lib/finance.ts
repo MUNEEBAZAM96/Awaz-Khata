@@ -102,6 +102,34 @@ export function summarize(records: TransactionRecord[]): Totals {
   };
 }
 
+export interface OverallTotals extends Totals {
+  /**
+   * Money on hand: income − expenses, plus what has come back in, minus what
+   * is currently lent out. Money lent to a person has left the user's pocket
+   * but is not spent, so it reduces the available figure without counting as
+   * an expense.
+   */
+  balance: number;
+}
+
+/**
+ * Whole-ledger totals including the available balance.
+ *
+ * Deliberately separate from `summarize`, which is also used for period
+ * buckets — an "available balance for today" would be a meaningless figure,
+ * and this keeps it out of the period query results.
+ *
+ * Computed here rather than in the app: the UI must never derive a financial
+ * figure of its own.
+ */
+export function overallSummary(records: TransactionRecord[]): OverallTotals {
+  const totals = summarize(records);
+  return {
+    ...totals,
+    balance: totals.income - totals.expenses - totals.given + totals.received,
+  };
+}
+
 export interface PersonStats {
   person: string;
   given: number;

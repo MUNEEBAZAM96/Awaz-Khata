@@ -11,4 +11,6 @@ export interface Summary {
   expenses: number;
   given: number;
   received: number;
+  /** Money on hand: income - expenses - given + received. Computed by the finance engine so the client never derives a figure itself. */
+  balance: number;
 }

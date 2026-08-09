@@ -20,8 +20,11 @@ import {
 } from '@workspace/api-client-react';
 import { transcribeRecording } from '@/lib/api';
 import { playBase64Audio, stopPlayback } from '@/lib/audio';
+import { useT } from '@/i18n';
+import { usePreferences } from '@/store/preferences';
+import type { UnderstoodTransaction } from '@/components/voice/TranscriptCard';
 
-export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
+export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking' | 'confirming';
 
 /** Structured payload behind the current reply, for richer result cards. */
 export interface ReplyMeta {
@@ -40,36 +43,38 @@ export interface VoiceInteraction {
 /** Session conversation window — last few exchanges only, by design. */
 const MAX_INTERACTIONS = 5;
 
-const UNKNOWN_MESSAGE = 'میں آپ کی بات سمجھ نہیں سکا۔ دوبارہ بولیں۔';
-const GENERIC_ERROR = 'کچھ غلط ہو گیا، دوبارہ کوشش کریں۔';
-const NETWORK_ERROR = 'سرور سے رابطہ نہیں ہو سکا۔';
+/**
+ * Above this rupee amount a transaction is confirmed by the user before it is
+ * written. Mishearing «پانچ سو» as «پانچ ہزار» is the failure mode that costs
+ * real money, and a single tap is cheap insurance.
+ */
+const HIGH_VALUE_THRESHOLD = 5000;
 
-function urduErrorFrom(err: unknown): string {
-  // Backend ApiError carries { error: "اردو پیغام" } in .data
-  const data = (err as { data?: unknown } | null)?.data;
-  if (data && typeof data === 'object' && 'error' in data) {
-    const message = (data as { error?: unknown }).error;
-    if (typeof message === 'string' && message.trim()) return message;
-  }
-  if (err instanceof Error && /network|fetch/i.test(err.message)) {
-    return NETWORK_ERROR;
-  }
-  if (err instanceof Error && err.message && /[\u0600-\u06FF]/.test(err.message)) {
-    // Already a user-facing Urdu message (e.g. from transcribeRecording)
-    return err.message;
-  }
-  return GENERIC_ERROR;
-}
+/**
+ * Spoken output is Urdu regardless of UI language: every response template in
+ * the finance engine is Urdu, and the TTS voice is an Urdu voice. Feeding it
+ * an English sentence would produce a mispronounced answer, so client-side
+ * messages are DISPLAYED in the user's language but SPOKEN with these fixed
+ * Urdu equivalents.
+ */
+const SPOKEN_UNKNOWN = 'میں آپ کی بات سمجھ نہیں سکا۔ دوبارہ بولیں۔';
 
 export function useVoiceAssistant() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const queryClient = useQueryClient();
+  const t = useT();
+  const { prefs } = usePreferences();
+
   const [state, setState] = useState<VoiceState>('idle');
   const [transcript, setTranscript] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
   const [replyMeta, setReplyMeta] = useState<ReplyMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [interactions, setInteractions] = useState<VoiceInteraction[]>([]);
+  /** Set when a transaction is waiting for explicit user approval. */
+  const [pending, setPending] = useState<UnderstoodTransaction | null>(null);
+
   const busyRef = useRef(false);
   const stateRef = useRef<VoiceState>('idle');
   stateRef.current = state;
@@ -78,9 +83,37 @@ export function useVoiceAssistant() {
   // mutate UI state afterwards.
   const generationRef = useRef(0);
 
+  // The preference is read inside async callbacks; a ref keeps them from
+  // capturing a stale value without re-creating every callback.
+  const speakEnabledRef = useRef(prefs.voiceResponses);
+  speakEnabledRef.current = prefs.voiceResponses;
+
   useEffect(() => {
     AudioModule.requestRecordingPermissionsAsync().catch(() => undefined);
   }, []);
+
+  /** Map a thrown error to a message that is safe to show a user. */
+  const messageFrom = useCallback(
+    (err: unknown): { text: string; network: boolean } => {
+      // Backend ApiError carries { error: "اردو پیغام" } in .data. Those are
+      // already user-facing and already localized (Urdu) by the server.
+      const data = (err as { data?: unknown } | null)?.data;
+      if (data && typeof data === 'object' && 'error' in data) {
+        const message = (data as { error?: unknown }).error;
+        if (typeof message === 'string' && message.trim()) {
+          return { text: message, network: false };
+        }
+      }
+      if (err instanceof Error && /network|fetch/i.test(err.message)) {
+        return { text: t('error.network'), network: true };
+      }
+      if (err instanceof Error && err.message && /[؀-ۿ]/.test(err.message)) {
+        return { text: err.message, network: false };
+      }
+      return { text: t('error.generic'), network: false };
+    },
+    [t],
+  );
 
   /**
    * Abandon an in-progress recording (discarded, not processed) and stop
@@ -97,6 +130,8 @@ export function useVoiceAssistant() {
       }
     }
     stopPlayback();
+    setPending(null);
+    setSaving(false);
     setState('idle');
   }, [recorder]);
 
@@ -118,27 +153,35 @@ export function useVoiceAssistant() {
 
   /**
    * Show + speak a sentence aloud; never throws, always lands back on idle.
-   * When `userText` is provided the exchange is a successful interaction:
-   * after playback it moves into the session conversation history and the
-   * live transcript/reply slots clear so the history is the single record.
-   * `active` reports whether this pipeline run is still current — once it
-   * returns false (screen blurred / cancelled) no speech starts and no UI
-   * state is touched, except the history append which records what happened.
+   *
+   * `displayText` is what the user reads, `spokenText` what the Urdu voice
+   * says — they differ for client-side messages when the UI is not in Urdu.
+   * `active` reports whether this pipeline run is still current.
    */
   const speakAndFinish = useCallback(
-    async (text: string, userText?: string, active: () => boolean = () => true) => {
-      setReply(text);
+    async (
+      displayText: string,
+      options: {
+        spokenText?: string;
+        userText?: string;
+        active?: () => boolean;
+      } = {},
+    ) => {
+      const { spokenText = displayText, userText, active = () => true } = options;
+      setReply(displayText);
       try {
-        const speech = await speakText({ text });
-        if (!active()) return;
-        setState('speaking');
-        await playBase64Audio(speech.audio);
+        if (speakEnabledRef.current) {
+          const speech = await speakText({ text: spokenText });
+          if (!active()) return;
+          setState('speaking');
+          await playBase64Audio(speech.audio);
+        }
       } catch {
         // TTS failure is non-fatal — the text is already visible on screen
         // and any saved transaction stays saved.
       } finally {
         if (userText) {
-          appendInteraction(userText, text);
+          appendInteraction(userText, displayText);
         }
         if (active()) {
           if (userText) {
@@ -154,9 +197,57 @@ export function useVoiceAssistant() {
   );
 
   /**
-   * Intent → action → spoken result for an Urdu utterance. Shared by the
-   * voice pipeline (after STT) and text-triggered asks (suggestion pills).
-   * Handles its own errors; never throws.
+   * Commit a transaction and speak the backend's confirmation.
+   *
+   * The spoken confirmation is built server-side AFTER the write succeeds —
+   * the app never announces success on its own.
+   */
+  const commit = useCallback(
+    async (
+      entry: UnderstoodTransaction,
+      userText: string | undefined,
+      active: () => boolean,
+    ) => {
+      setSaving(true);
+      try {
+        const saved = await createTransaction({
+          amount: entry.amount,
+          type: entry.type as TransactionInputType,
+          person: entry.person ?? null,
+          category: entry.category ?? null,
+          description: entry.description ?? null,
+        });
+        // The transaction is committed — refresh data everywhere even if
+        // this run was cancelled mid-save.
+        queryClient.invalidateQueries({ queryKey: getListTransactionsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ['finance'] });
+
+        if (!active()) {
+          // Saved but cancelled: record the exchange, skip speech/UI.
+          if (userText) appendInteraction(userText, saved.responseText);
+          return;
+        }
+        setReplyMeta({ kind: 'transaction' });
+        await speakAndFinish(saved.responseText, { userText, active });
+      } catch (err) {
+        if (!active()) return;
+        const { text, network } = messageFrom(err);
+        setError(text);
+        setState('idle');
+        if (!network) {
+          // The failure message came from the backend and is already Urdu.
+          await speakAndFinish(text, { active });
+        }
+      } finally {
+        setSaving(false);
+      }
+    },
+    [queryClient, speakAndFinish, appendInteraction, messageFrom],
+  );
+
+  /**
+   * Intent → action → spoken result. Shared by the voice pipeline (after STT)
+   * and text-triggered asks. Handles its own errors; never throws.
    */
   const handleText = useCallback(
     async (text: string, active: () => boolean) => {
@@ -170,26 +261,25 @@ export function useVoiceAssistant() {
           intent.amount != null &&
           intent.amount > 0
         ) {
-          const saved = await createTransaction({
+          const entry: UnderstoodTransaction = {
+            type: intent.type as UnderstoodTransaction['type'],
             amount: intent.amount,
-            type: intent.type as TransactionInputType,
             person: intent.person ?? null,
             category: intent.category ?? null,
             description: intent.description ?? null,
-          });
-          // The transaction is committed — refresh data everywhere even if
-          // this run was cancelled mid-save.
-          queryClient.invalidateQueries({
-            queryKey: getListTransactionsQueryKey(),
-          });
-          queryClient.invalidateQueries({ queryKey: ['finance'] });
-          if (!active()) {
-            // Saved but cancelled: record the exchange, skip speech/UI.
-            appendInteraction(text, saved.responseText);
+          };
+
+          // High-value entries wait for a tap. Everything else keeps the
+          // fast path the product depends on.
+          if (entry.amount >= HIGH_VALUE_THRESHOLD) {
+            setPending(entry);
+            setReplyMeta({ kind: 'transaction' });
+            setState('confirming');
             return;
           }
+
           setReplyMeta({ kind: 'transaction' });
-          await speakAndFinish(saved.responseText, text, active);
+          await commit(entry, text, active);
           return;
         }
 
@@ -203,30 +293,50 @@ export function useVoiceAssistant() {
           if (!active()) return; // read-only — nothing to record
           setReplyMeta({
             kind: 'query',
-            result: (outcome.result ?? undefined) as
-              | Record<string, unknown>
-              | undefined,
+            result: (outcome.result ?? undefined) as Record<string, unknown> | undefined,
           });
-          await speakAndFinish(outcome.responseText, text, active);
+          await speakAndFinish(outcome.responseText, { userText: text, active });
           return;
         }
 
         // mode === "unknown" or missing fields
-        setError(UNKNOWN_MESSAGE);
-        await speakAndFinish(UNKNOWN_MESSAGE, undefined, active);
+        setError(t('voice.errorUnderstand'));
+        await speakAndFinish(t('voice.errorUnderstand'), {
+          spokenText: SPOKEN_UNKNOWN,
+          active,
+        });
       } catch (err) {
         if (!active()) return;
-        const message = urduErrorFrom(err);
+        const { text: message, network } = messageFrom(err);
         setError(message);
-        if (message !== NETWORK_ERROR) {
-          await speakAndFinish(message, undefined, active);
+        if (!network) {
+          await speakAndFinish(message, { active });
         } else {
           setState('idle');
         }
       }
     },
-    [queryClient, speakAndFinish, appendInteraction],
+    [commit, speakAndFinish, messageFrom, t],
   );
+
+  /** User approved a high-value entry. */
+  const confirmPending = useCallback(async () => {
+    const entry = pending;
+    if (!entry) return;
+    const gen = generationRef.current;
+    const active = () => generationRef.current === gen;
+    setPending(null);
+    setState('processing');
+    await commit(entry, transcript ?? undefined, active);
+  }, [pending, transcript, commit]);
+
+  /** User rejected the parsed entry — nothing is written. */
+  const cancelPending = useCallback(() => {
+    setPending(null);
+    setTranscript(null);
+    setReplyMeta(null);
+    setState('idle');
+  }, []);
 
   const process = useCallback(
     async (uri: string, active: () => boolean) => {
@@ -244,10 +354,10 @@ export function useVoiceAssistant() {
         setTranscript(text);
       } catch (err) {
         if (!active()) return;
-        const message = urduErrorFrom(err);
+        const { text: message, network } = messageFrom(err);
         setError(message);
-        if (message !== NETWORK_ERROR) {
-          await speakAndFinish(message, undefined, active);
+        if (!network) {
+          await speakAndFinish(message, { active });
         } else {
           setState('idle');
         }
@@ -255,13 +365,13 @@ export function useVoiceAssistant() {
       }
       await handleText(text, active);
     },
-    [handleText, speakAndFinish],
+    [handleText, speakAndFinish, messageFrom],
   );
 
   /**
-   * Run a suggestion/typed question through the same pipeline as speech,
-   * skipping STT. Only starts from idle; shows the text as the transcript
-   * so the flow reads identically to a spoken exchange.
+   * Run a typed question or suggestion through the same pipeline as speech,
+   * skipping STT. This is the text fallback: one intent path, one finance
+   * engine, whether the words were spoken or typed.
    */
   const ask = useCallback(
     async (text: string) => {
@@ -274,6 +384,7 @@ export function useVoiceAssistant() {
         setError(null);
         setReply(null);
         setReplyMeta(null);
+        setPending(null);
         setTranscript(text);
         await handleText(text, active);
       } finally {
@@ -287,27 +398,28 @@ export function useVoiceAssistant() {
   const toggle = useCallback(async () => {
     if (busyRef.current) return;
 
-    if (state === 'idle') {
+    if (state === 'idle' || state === 'confirming') {
       busyRef.current = true;
       try {
         const permission = await AudioModule.requestRecordingPermissionsAsync();
         if (!permission.granted) {
-          setError('مائیکروفون کی اجازت درکار ہے۔');
+          setError(t('permission.deniedBody'));
           return;
         }
-        if (Platform.OS !== 'web') {
+        if (Platform.OS !== 'web' && prefs.haptics) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
         setError(null);
         setTranscript(null);
         setReply(null);
         setReplyMeta(null);
+        setPending(null);
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
         await recorder.prepareToRecordAsync();
         recorder.record();
         setState('listening');
       } catch {
-        setError('ریکارڈنگ شروع نہیں ہو سکی۔');
+        setError(t('error.generic'));
         setState('idle');
       } finally {
         busyRef.current = false;
@@ -323,28 +435,28 @@ export function useVoiceAssistant() {
       const gen = generationRef.current;
       const active = () => generationRef.current === gen;
       try {
-        if (Platform.OS !== 'web') {
+        if (Platform.OS !== 'web' && prefs.haptics) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
         await recorder.stop();
         if (!active()) return; // cancelled while stopping — discard recording
         const uri = recorder.uri;
         if (!uri) {
-          setError('ریکارڈنگ محفوظ نہیں ہوئی، دوبارہ کوشش کریں۔');
+          setError(t('error.generic'));
           setState('idle');
           return;
         }
         await process(uri, active);
       } catch {
         if (active()) {
-          setError(GENERIC_ERROR);
+          setError(t('error.generic'));
           setState('idle');
         }
       } finally {
         busyRef.current = false;
       }
     }
-  }, [state, recorder, process]);
+  }, [state, recorder, process, t, prefs.haptics]);
 
   return {
     state,
@@ -352,9 +464,13 @@ export function useVoiceAssistant() {
     reply,
     replyMeta,
     error,
+    saving,
+    pending,
     interactions,
     toggle,
     ask,
     cancel,
+    confirmPending,
+    cancelPending,
   };
 }

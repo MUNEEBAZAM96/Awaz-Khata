@@ -108,8 +108,50 @@ export const ListTransactionsResponse = zod.object({
   "income": zod.number(),
   "expenses": zod.number(),
   "given": zod.number(),
-  "received": zod.number()
+  "received": zod.number(),
+  "balance": zod.number().describe('Money on hand: income - expenses - given + received. Computed by the finance engine so the client never derives a figure itself.\n')
 })
+})
+
+
+/**
+ * @summary Correct a saved transaction (e.g. a misheard amount or person)
+ */
+export const UpdateTransactionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateTransactionBody = zod.object({
+  "amount": zod.number().optional().describe('Rupee amount (positive)'),
+  "type": zod.enum(['expense', 'income', 'given', 'received']).optional(),
+  "person": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "description": zod.string().nullish()
+}).describe('Partial edit. Only the supplied fields change. `id` and `timestamp` are immutable: re-dating a transaction would silently change what every period query reports.\n')
+
+export const UpdateTransactionResponse = zod.object({
+  "transaction": zod.object({
+  "id": zod.string(),
+  "amount": zod.number(),
+  "type": zod.enum(['expense', 'income', 'given', 'received']),
+  "person": zod.string().nullable(),
+  "category": zod.string().nullable(),
+  "description": zod.string().nullable(),
+  "timestamp": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Remove a transaction from the ledger
+ */
+export const DeleteTransactionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteTransactionResponse = zod.object({
+  "deleted": zod.boolean(),
+  "id": zod.string()
 })
 
 

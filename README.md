@@ -11,7 +11,7 @@ A voice-first personal finance assistant for Pakistani users, built for the **Up
 ```
 User speaks (Urdu / Roman Urdu / English / mixed)
   → Expo records audio
-  → POST /api/voice/transcribe   (Uplift AI STT)
+  → POST /api/voice/transcribe   (Uplift AI STT) 
   → POST /api/voice/extract      (Groq LLM → structured intent JSON)
   → POST /api/transactions       (save)  OR  POST /api/query (finance engine)
   → deterministic Urdu response template

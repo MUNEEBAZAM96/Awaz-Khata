@@ -22,6 +22,9 @@ export type {
   TransactionInput,
   TransactionsList,
   TranscriptionResult,
+  TransactionPatch,
+  UpdateTransactionResult,
+  DeleteTransactionResult,
 } from "./generated/types";
 export {
   ChatMessageRole,
@@ -33,4 +36,5 @@ export {
   QueryRequestPeriod,
   TransactionInputType,
   TransactionType,
+  TransactionPatchType,
 } from "./generated/types";

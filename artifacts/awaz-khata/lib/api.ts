@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { API_BASE_URL } from './config';
 
 /**
  * Frontend API service.
@@ -10,8 +11,6 @@ import { Platform } from 'react-native';
  * Native's FormData file shape ({ uri, name, type }) differs from the web Blob
  * the generated client expects.
  */
-
-const API_BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 export async function transcribeRecording(uri: string): Promise<string> {
   const formData = new FormData();

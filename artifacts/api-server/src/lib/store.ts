@@ -81,3 +81,63 @@ export function addTransaction(input: {
   writeQueue = task.catch(() => undefined);
   return task;
 }
+
+/**
+ * Apply a partial edit to one transaction. Returns null when no record has
+ * that id. `id` and `timestamp` are never editable — correcting a misheard
+ * amount must not silently move the transaction into a different day, which
+ * would change what every period query reports.
+ *
+ * Runs through the same write queue as addTransaction, so a concurrent
+ * create can never clobber the edit (or vice versa).
+ */
+export function updateTransaction(
+  id: string,
+  patch: {
+    amount?: number;
+    type?: TransactionType;
+    person?: string | null;
+    category?: string | null;
+    description?: string | null;
+  },
+): Promise<TransactionRecord | null> {
+  const task = writeQueue.then(async () => {
+    const records = await readAll();
+    const index = records.findIndex((r) => r.id === id);
+    if (index === -1) return null;
+
+    const current = records[index] as TransactionRecord;
+    const updated: TransactionRecord = {
+      ...current,
+      ...(patch.amount !== undefined ? { amount: patch.amount } : {}),
+      ...(patch.type !== undefined ? { type: patch.type } : {}),
+      ...(patch.person !== undefined
+        ? { person: patch.person?.trim() || null }
+        : {}),
+      ...(patch.category !== undefined
+        ? { category: patch.category?.trim() || null }
+        : {}),
+      ...(patch.description !== undefined
+        ? { description: patch.description?.trim() || null }
+        : {}),
+    };
+    records[index] = updated;
+    await writeAllAtomic(records);
+    return updated;
+  });
+  writeQueue = task.catch(() => undefined);
+  return task;
+}
+
+/** Remove one transaction. Returns false when no record has that id. */
+export function deleteTransaction(id: string): Promise<boolean> {
+  const task = writeQueue.then(async () => {
+    const records = await readAll();
+    const remaining = records.filter((r) => r.id !== id);
+    if (remaining.length === records.length) return false;
+    await writeAllAtomic(remaining);
+    return true;
+  });
+  writeQueue = task.catch(() => undefined);
+  return task;
+}

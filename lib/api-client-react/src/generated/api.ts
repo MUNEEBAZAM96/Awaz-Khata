@@ -24,6 +24,7 @@ import type {
   ChatAnswer,
   ChatRequest,
   CreateTransactionResult,
+  DeleteTransactionResult,
   ExtractRequest,
   ExtractResult,
   HealthStatus,
@@ -34,9 +35,11 @@ import type {
   SpeakRequest,
   SpeakResult,
   TransactionInput,
+  TransactionPatch,
   TransactionsList,
   TranscribeAudioBody,
   TranscriptionResult,
+  UpdateTransactionResult,
   UpstreamErrorResponse
 } from './api.schemas';
 
@@ -506,6 +509,149 @@ export function useListTransactions<TData = Awaited<ReturnType<typeof listTransa
 
 
 
+
+export const getUpdateTransactionUrl = (id: string,) => {
+
+
+
+
+  return `/api/transactions/${id}`
+}
+
+/**
+ * @summary Correct a saved transaction (e.g. a misheard amount or person)
+ */
+export const updateTransaction = async (id: string,
+    transactionPatch: TransactionPatch, options?: Parameters<typeof customFetch>[1]): Promise<UpdateTransactionResult> => {
+
+  return customFetch<UpdateTransactionResult>(getUpdateTransactionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(transactionPatch)
+  }
+);}
+
+
+
+
+
+export const getUpdateTransactionMutationOptions = <TError = ErrorType<BadRequestResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTransaction>>, TError,{id: string;data: BodyType<TransactionPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTransaction>>, TError,{id: string;data: BodyType<TransactionPatch>}, TContext> => {
+
+const mutationKey = ['updateTransaction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTransaction>>, {id: string;data: BodyType<TransactionPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateTransaction(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTransactionMutationResult = NonNullable<Awaited<ReturnType<typeof updateTransaction>>>
+    export type UpdateTransactionMutationBody = BodyType<TransactionPatch>
+    export type UpdateTransactionMutationError = ErrorType<BadRequestResponse | NotFoundResponse>
+
+    /**
+ * @summary Correct a saved transaction (e.g. a misheard amount or person)
+ */
+export const useUpdateTransaction = <TError = ErrorType<BadRequestResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTransaction>>, TError,{id: string;data: BodyType<TransactionPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTransaction>>,
+        TError,
+        {id: string;data: BodyType<TransactionPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateTransactionMutationOptions(options));
+    }
+
+export const getDeleteTransactionUrl = (id: string,) => {
+
+
+
+
+  return `/api/transactions/${id}`
+}
+
+/**
+ * @summary Remove a transaction from the ledger
+ */
+export const deleteTransaction = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<DeleteTransactionResult> => {
+
+  return customFetch<DeleteTransactionResult>(getDeleteTransactionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteTransactionMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteTransaction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTransaction>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteTransaction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTransactionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTransaction>>>
+
+    export type DeleteTransactionMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Remove a transaction from the ledger
+ */
+export const useDeleteTransaction = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTransaction>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteTransactionMutationOptions(options));
+    }
 
 export const getGetPersonLedgerUrl = (person: string,) => {
 

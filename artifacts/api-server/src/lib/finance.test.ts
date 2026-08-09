@@ -5,6 +5,7 @@ import {
   confirmationFor,
   filterByPeriod,
   filterLastMonth,
+  overallSummary,
   personStats,
   runFinanceQuery,
   summarize,
@@ -174,6 +175,56 @@ describe("summarize", () => {
 
   it("empty ledger totals are zero", () => {
     expect(summarize([])).toEqual({ income: 0, expenses: 0, given: 0, received: 0 });
+  });
+});
+
+describe("overallSummary", () => {
+  it("adds an available balance to the raw totals", () => {
+    const records = [
+      tx({ amount: 2000, type: "income" }),
+      tx({ amount: 150, type: "expense" }),
+      tx({ amount: 300, type: "given", person: "علی" }),
+      tx({ amount: 120, type: "received", person: "علی" }),
+    ];
+    expect(overallSummary(records)).toEqual({
+      income: 2000,
+      expenses: 150,
+      given: 300,
+      received: 120,
+      // 2000 - 150 - 300 + 120
+      balance: 1670,
+    });
+  });
+
+  it("empty ledger balance is zero", () => {
+    expect(overallSummary([]).balance).toBe(0);
+  });
+
+  it("money lent out reduces the available balance without being an expense", () => {
+    const records = [
+      tx({ amount: 1000, type: "income" }),
+      tx({ amount: 400, type: "given", person: "علی" }),
+    ];
+    const totals = overallSummary(records);
+    expect(totals.expenses).toBe(0);
+    expect(totals.balance).toBe(600);
+  });
+
+  it("money returned comes back into the available balance", () => {
+    const records = [
+      tx({ amount: 1000, type: "income" }),
+      tx({ amount: 400, type: "given", person: "علی" }),
+      tx({ amount: 400, type: "received", person: "علی" }),
+    ];
+    expect(overallSummary(records).balance).toBe(1000);
+  });
+
+  it("balance can go negative when spending exceeds income", () => {
+    const records = [
+      tx({ amount: 100, type: "income" }),
+      tx({ amount: 450, type: "expense" }),
+    ];
+    expect(overallSummary(records).balance).toBe(-350);
   });
 });
 

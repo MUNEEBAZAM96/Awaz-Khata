@@ -126,6 +126,31 @@ export interface TransactionInput {
   description?: string | null;
 }
 
+export type TransactionPatchType = typeof TransactionPatchType[keyof typeof TransactionPatchType];
+
+
+export const TransactionPatchType = {
+  expense: 'expense',
+  income: 'income',
+  given: 'given',
+  received: 'received',
+} as const;
+
+/**
+ * Partial edit. Only the supplied fields change. `id` and `timestamp` are immutable: re-dating a transaction would silently change what every period query reports.
+ */
+export interface TransactionPatch {
+  /** Rupee amount (positive) */
+  amount?: number;
+  type?: TransactionPatchType;
+  /** @nullable */
+  person?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  description?: string | null;
+}
+
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType];
 
 
@@ -149,6 +174,15 @@ export interface Transaction {
   timestamp: string;
 }
 
+export interface UpdateTransactionResult {
+  transaction: Transaction;
+}
+
+export interface DeleteTransactionResult {
+  deleted: boolean;
+  id: string;
+}
+
 export interface CreateTransactionResult {
   transaction: Transaction;
   /** Deterministic Urdu confirmation sentence to speak aloud */
@@ -160,6 +194,8 @@ export interface Summary {
   expenses: number;
   given: number;
   received: number;
+  /** Money on hand: income - expenses - given + received. Computed by the finance engine so the client never derives a figure itself. */
+  balance: number;
 }
 
 export interface TransactionsList {
