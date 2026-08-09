@@ -12,7 +12,14 @@ import { API_BASE_URL } from './config';
  * the generated client expects.
  */
 
-export async function transcribeRecording(uri: string): Promise<string> {
+/**
+ * Upload a recorded audio file and return the Urdu transcript.
+ *
+ * @param uri      Local file URI returned by the Expo audio recorder.
+ * @param language App language code (ur/hi/pa/skr/en). The backend maps this
+ *                 to the correct Uplift STT language code. Defaults to "ur".
+ */
+export async function transcribeRecording(uri: string, language = 'ur'): Promise<string> {
   const formData = new FormData();
 
   if (Platform.OS === 'web') {
@@ -23,6 +30,8 @@ export async function transcribeRecording(uri: string): Promise<string> {
       new File([blob], `recording.${ext}`, { type: blob.type || 'audio/webm' }),
     );
   } else {
+    // React Native FormData file object — the runtime generates the multipart
+    // boundary; do NOT set Content-Type manually on the fetch call.
     const name = uri.split('/').pop() ?? 'recording.m4a';
     formData.append('audio', {
       uri,
@@ -30,6 +39,9 @@ export async function transcribeRecording(uri: string): Promise<string> {
       type: 'audio/m4a',
     } as unknown as Blob);
   }
+
+  // Pass the selected language so the backend uses the right STT language code.
+  formData.append('language', language);
 
   const res = await fetch(`${API_BASE_URL}/api/voice/transcribe`, {
     method: 'POST',

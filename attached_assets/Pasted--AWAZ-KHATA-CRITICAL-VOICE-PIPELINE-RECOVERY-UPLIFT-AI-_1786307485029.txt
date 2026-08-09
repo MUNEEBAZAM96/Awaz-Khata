@@ -1,0 +1,1752 @@
+# AWAZ KHATA — CRITICAL VOICE PIPELINE RECOVERY + UPLIFT AI SDK CORRECT IMPLEMENTATION
+
+You are working on the existing **Awaz Khata (آواز کھاتہ)** application.
+
+This is a **production-critical debugging and recovery task**.
+
+The application previously had a working voice transaction pipeline. After recent changes, the voice feature has regressed and users are seeing errors such as:
+
+> "Unable to listen"
+
+Speech is not being reliably converted into text, and as a consequence transactions are not being correctly extracted or stored.
+
+Your job is to **find the root cause, repair the entire voice pipeline, and verify it end-to-end**.
+
+Do NOT treat this as a UI redesign.
+
+---
+
+# 🚨 HIGHEST PRIORITY
+
+The application must reliably perform:
+
+```text
+🎙️ User speaks
+        ↓
+🎧 Expo records audio
+        ↓
+📦 Audio file/Buffer
+        ↓
+POST /api/voice/transcribe
+        ↓
+Uplift AI Node.js SDK
+        ↓
+📝 Transcript
+        ↓
+POST /api/voice/extract
+        ↓
+🧠 LLM structured intent
+        ↓
+💰 Finance engine
+        ↓
+💾 transactions.json
+        ↓
+📊 Ledger
+        ↓
+🔊 Uplift AI TTS
+        ↓
+🗣️ Spoken response
+```
+
+Every stage must work.
+
+---
+
+# 1. DO NOT REDESIGN THE APP
+
+This task is NOT for:
+
+* UI redesign
+* changing colors
+* changing icons
+* changing navigation
+* changing animations
+* changing typography
+* adding settings
+* adding multilingual UI
+* adding new financial features
+* changing storage
+* changing the finance engine
+
+Keep the current UI exactly as it is unless a UI change is directly required to repair the voice functionality.
+
+The recent UI work can remain.
+
+We are fixing the **functional regression**.
+
+---
+
+# 2. READ THE PROJECT DOCUMENTATION FIRST
+
+Before modifying anything, read:
+
+```text
+CLAUDE.md
+```
+
+Also inspect:
+
+```text
+artifacts/awaz-khata/
+artifacts/api-server/
+lib/api-spec/
+lib/api-client-react/
+lib/api-zod/
+```
+
+Especially:
+
+```text
+artifacts/api-server/src/lib/uplift.ts
+artifacts/api-server/src/lib/llm.ts
+artifacts/api-server/src/lib/finance.ts
+artifacts/api-server/src/lib/store.ts
+artifacts/api-server/src/routes/
+artifacts/api-server/src/app.ts
+```
+
+And find the complete Expo microphone/recording implementation.
+
+---
+
+# 3. USE THE OFFICIAL UPLIFT AI NODE.JS SDK
+
+The project must use the official Uplift AI Node.js SDK for STT:
+
+```text
+@upliftai/sdk-js
+```
+
+Do NOT manually recreate the Uplift STT HTTP request if the SDK is available.
+
+The official SDK supports:
+
+```typescript
+client.stt.transcribe({
+  file,
+  fileName,
+  model,
+  language,
+  domain,
+})
+```
+
+Use this SDK correctly.
+
+---
+
+# 4. UPLIFT STT IMPLEMENTATION REQUIREMENT
+
+For audio received from Expo, the backend will normally receive the audio as binary data.
+
+Convert/obtain the uploaded audio as a Node.js `Buffer`.
+
+Then call Uplift approximately like:
+
+```typescript
+const { transcript } = await client.stt.transcribe({
+  file: audioBuffer,
+  fileName: originalFileName,
+  model: "scribe",
+  language: selectedLanguage,
+});
+```
+
+IMPORTANT:
+
+When using a `Buffer`, Uplift requires:
+
+```text
+fileName
+```
+
+for format detection.
+
+Therefore:
+
+```typescript
+file: audioBuffer
+fileName: "recording.m4a"
+```
+
+must be provided correctly.
+
+DO NOT omit `fileName`.
+
+---
+
+# 5. AUDIO FORMAT MUST BE CORRECT
+
+This is one of the most important things to investigate.
+
+The Expo app may generate something such as:
+
+```text
+recording.m4a
+```
+
+or another supported format.
+
+The backend must preserve the correct filename/extension.
+
+Do NOT do something like:
+
+```typescript
+fileName: "recording.mp3"
+```
+
+when the actual uploaded file is M4A.
+
+The filename must correspond to the actual audio format.
+
+Inspect:
+
+```text
+original filename
+extension
+MIME type
+buffer size
+```
+
+before calling Uplift.
+
+---
+
+# 6. DO NOT FAKE THE MIME TYPE
+
+Do not relabel the uploaded audio as another format just to make the request pass.
+
+For example, do not claim:
+
+```text
+audio/mpeg
+```
+
+if the actual recording is:
+
+```text
+audio/mp4
+```
+
+or:
+
+```text
+audio/m4a
+```
+
+unless the actual file is encoded in that format.
+
+The Uplift SDK needs correct format detection.
+
+---
+
+# 7. UPLIFT STT MODEL
+
+Use:
+
+```text
+scribe
+```
+
+as the default STT model.
+
+Do not unnecessarily switch to:
+
+```text
+scribe-mini
+```
+
+because transcription accuracy is more important than minor cost/latency optimization during this recovery.
+
+---
+
+# 8. LANGUAGE MUST BE PASSED TO UPLIFT
+
+The application is being expanded to multilingual support.
+
+The STT architecture must therefore support a selected language.
+
+At minimum design the backend so it can accept:
+
+```text
+ur
+hi
+pa
+```
+
+and a Saraiki strategy appropriate to the available Uplift model/language support.
+
+Do NOT hard-code:
+
+```typescript
+language: "ur"
+```
+
+everywhere.
+
+The selected app language should flow through:
+
+```text
+Expo
+ ↓
+/api/voice/transcribe
+ ↓
+Uplift STT
+```
+
+However, if the current implementation does not yet have the multilingual language selector implemented, preserve Urdu as the default while making the API capable of receiving a language parameter.
+
+Do not break the current Urdu pipeline.
+
+---
+
+# 9. LANGUAGE MAPPING MUST BE CENTRALIZED
+
+Create a single language mapping if necessary.
+
+For example conceptually:
+
+```typescript
+const STT_LANGUAGE_MAP = {
+  urdu: "ur",
+  hindi: "hi",
+  punjabi: "pa",
+};
+```
+
+Do not scatter language codes throughout the application.
+
+The exact Saraiki handling should be based on actual Uplift support rather than inventing an unsupported language code.
+
+If Uplift does not support a dedicated Saraiki code, do NOT fabricate one.
+
+Use the documented fallback strategy only after verifying what Uplift accepts.
+
+---
+
+# 10. VERIFY UPLIFT SDK PACKAGE
+
+Check whether:
+
+```text
+@upliftai/sdk-js
+```
+
+is already installed.
+
+If it is not installed, add the correct dependency to the backend package.
+
+Do NOT install a random similarly named package.
+
+Then initialize the client server-side:
+
+```typescript
+import UpliftAI from "@upliftai/sdk-js";
+
+const client = new UpliftAI({
+  apiKey: process.env.UPLIFTAI_API_KEY!,
+});
+```
+
+Never put this code in Expo.
+
+---
+
+# 11. UPLIFT API KEY SECURITY
+
+The key must remain server-side:
+
+```text
+UPLIFTAI_API_KEY
+```
+
+stored in Replit Secrets.
+
+NEVER expose it through:
+
+```text
+EXPO_PUBLIC_*
+```
+
+Never send it to the mobile client.
+
+Never log it.
+
+Never hard-code it.
+
+---
+
+# 12. UPLIFT CLIENT CONFIGURATION
+
+Use the SDK's retry and timeout support appropriately.
+
+The official SDK supports:
+
+```typescript
+new UpliftAI({
+  apiKey,
+  maxRetries: 3,
+  timeout: 60000,
+});
+```
+
+The SDK automatically retries transient errors such as:
+
+```text
+408
+429
+500
+502
+503
+504
+```
+
+Do not implement a second aggressive retry loop around the SDK that could cause duplicate requests.
+
+A reasonable configuration for voice transcription is:
+
+```text
+maxRetries: 2 or 3
+timeout: 60000
+```
+
+Choose based on the existing application's requirements.
+
+---
+
+# 13. HANDLE UPLIFT TYPED ERRORS
+
+The official SDK provides:
+
+```typescript
+UpliftAIError
+UpliftAIAuthError
+UpliftAIInsufficientBalanceError
+UpliftAIRateLimitError
+```
+
+Use these error classes where appropriate.
+
+For example:
+
+```typescript
+try {
+  const result = await client.stt.transcribe(...);
+} catch (err) {
+  if (err instanceof UpliftAIAuthError) {
+    // invalid API key
+  } else if (err instanceof UpliftAIRateLimitError) {
+    // rate limited
+  } else if (err instanceof UpliftAIInsufficientBalanceError) {
+    // insufficient balance
+  } else if (err instanceof UpliftAIError) {
+    // other Uplift error
+  }
+}
+```
+
+Every Uplift error contains a request ID.
+
+Use it in server-side diagnostics:
+
+```text
+requestId
+statusCode
+code
+```
+
+but NEVER expose secrets.
+
+---
+
+# 14. ERROR MESSAGES MUST BE MEANINGFUL
+
+Do NOT convert every failure into:
+
+```text
+Unable to listen
+```
+
+Different failures must be distinguishable.
+
+For example:
+
+```text
+MIC_PERMISSION
+RECORDING_FAILED
+EMPTY_AUDIO
+UPLOAD_FAILED
+STT_AUTH_ERROR
+STT_RATE_LIMIT
+STT_BALANCE_ERROR
+STT_PROVIDER_ERROR
+TRANSCRIPT_EMPTY
+EXTRACTION_FAILED
+TRANSACTION_SAVE_FAILED
+TTS_FAILED
+```
+
+The user-facing message should be localized and friendly.
+
+The server logs should contain the technical diagnostic information.
+
+---
+
+# 15. IMPORTANT — EMPTY TRANSCRIPT
+
+If Uplift returns:
+
+```text
+transcript = ""
+```
+
+or whitespace only:
+
+DO NOT continue to the LLM.
+
+Do not create a transaction.
+
+Return a clear:
+
+```text
+No speech detected
+```
+
+response.
+
+This prevents empty/garbage transactions.
+
+---
+
+# 16. IMPORTANT — NEVER SAVE BEFORE EXTRACTION
+
+The correct flow is:
+
+```text
+Audio
+ ↓
+STT
+ ↓
+Validate transcript
+ ↓
+LLM extraction
+ ↓
+Validate structured intent
+ ↓
+Finance validation
+ ↓
+Save
+```
+
+Never:
+
+```text
+Audio
+ ↓
+guess transaction
+ ↓
+save
+```
+
+---
+
+# 17. TRACE THE MOBILE RECORDING PIPELINE
+
+Inspect the Expo recording implementation from the microphone button.
+
+Verify:
+
+```text
+permission
+↓
+recording start
+↓
+recording state
+↓
+recording stop
+↓
+audio URI
+↓
+audio file
+↓
+upload
+```
+
+Check for race conditions.
+
+Especially inspect whether the UI changes introduced something like:
+
+```text
+stopRecording()
+↓
+setRecording(null)
+↓
+component rerender
+↓
+URI lost
+↓
+upload fails
+```
+
+The audio URI must remain available until upload has completed.
+
+---
+
+# 18. CHECK FOR DOUBLE STOP / DOUBLE SUBMISSION
+
+Make sure the microphone cannot accidentally execute:
+
+```text
+stopRecording()
+stopRecording()
+```
+
+or:
+
+```text
+submitVoice()
+submitVoice()
+```
+
+because of:
+
+* rapid taps
+* callbacks
+* stale React state
+* effects
+* animation handlers
+* gesture handlers
+
+Use an explicit processing state.
+
+Conceptually:
+
+```text
+IDLE
+RECORDING
+STOPPING
+TRANSCRIBING
+EXTRACTING
+SAVING
+SPEAKING
+```
+
+Prevent invalid transitions.
+
+---
+
+# 19. CHECK THE MULTIPART UPLOAD
+
+Inspect exactly what Expo sends to:
+
+```text
+POST /api/voice/transcribe
+```
+
+Verify:
+
+```text
+field name
+filename
+MIME type
+binary data
+```
+
+If the backend expects:
+
+```text
+audio
+```
+
+the frontend must send:
+
+```text
+audio
+```
+
+Do not rename it casually.
+
+---
+
+# 20. REACT NATIVE FORMDATA WARNING
+
+Be extremely careful with:
+
+```text
+multipart/form-data
+```
+
+in React Native.
+
+Do not manually set an incorrect multipart Content-Type boundary.
+
+If the runtime is responsible for generating the boundary, allow it to do so.
+
+The request must contain actual binary audio, not:
+
+```text
+"[object Object]"
+```
+
+or a stringified URI.
+
+---
+
+# 21. BACKEND MULTIPART PARSING
+
+Inspect the backend route:
+
+```text
+/api/voice/transcribe
+```
+
+Verify the multipart parser actually receives the file.
+
+The backend should be able to determine:
+
+```text
+buffer
+original filename
+MIME type
+size
+```
+
+If the file is missing, return a proper error instead of calling Uplift with an undefined file.
+
+---
+
+# 22. TEST UPLIFT STT DIRECTLY FROM NODE
+
+Create/use a safe backend test with a real audio file.
+
+Conceptually:
+
+```typescript
+const buffer = readFileSync("./test-recording.m4a");
+
+const { transcript } = await client.stt.transcribe({
+  file: buffer,
+  fileName: "test-recording.m4a",
+  model: "scribe",
+  language: "ur",
+});
+
+console.log(transcript);
+```
+
+This test is critical.
+
+If this fails, fix the Uplift integration before debugging the LLM.
+
+---
+
+# 23. TEST STT WITH URDU
+
+Test an actual recording saying:
+
+```text
+آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے
+```
+
+Expected transcript should be semantically equivalent to:
+
+```text
+آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے
+```
+
+Minor punctuation/spacing differences are acceptable.
+
+The important thing is that:
+
+```text
+800
+petrol
+expense
+```
+
+can be reliably extracted.
+
+---
+
+# 24. TEST ROMAN URDU
+
+Test:
+
+```text
+Aj main ne 800 petrol pe kharch kiye
+```
+
+and:
+
+```text
+Main ne Ali ko 2000 diye
+```
+
+The extraction layer must correctly understand the resulting transcript.
+
+Do not assume STT always returns perfect Roman Urdu.
+
+The extraction layer should tolerate reasonable transcription variations.
+
+---
+
+# 25. TEST ENGLISH
+
+Test:
+
+```text
+I spent 800 rupees on petrol today.
+```
+
+and:
+
+```text
+I gave Ali 2000 rupees.
+```
+
+---
+
+# 26. TEST MIXED SPEECH
+
+Test examples such as:
+
+```text
+آج میں نے 800 rupees petrol پر spend کیے
+```
+
+and:
+
+```text
+میں نے Ali کو 2000 روپے دیے
+```
+
+The system should not break because the transcript contains multiple scripts/languages.
+
+---
+
+# 27. LLM EXTRACTION REMAINS STRICTLY STRUCTURED
+
+The LLM should only convert text into structured intent.
+
+Example:
+
+User:
+
+```text
+میں نے علی کو دو ہزار روپے دیے
+```
+
+Expected:
+
+```json
+{
+  "mode": "transaction",
+  "type": "given",
+  "amount": 2000,
+  "person": "علی"
+}
+```
+
+The LLM must NOT calculate balances.
+
+---
+
+# 28. FINANCIAL CALCULATIONS REMAIN DETERMINISTIC
+
+Keep:
+
+```text
+artifacts/api-server/src/lib/finance.ts
+```
+
+as the source of truth.
+
+For:
+
+```text
+given
+received
+expense
+income
+person balance
+daily totals
+monthly totals
+category totals
+```
+
+calculations must happen in backend code.
+
+---
+
+# 29. TRANSACTION STORAGE MUST REMAIN JSON
+
+The project explicitly requires:
+
+```text
+artifacts/api-server/data/transactions.json
+```
+
+Do NOT migrate to:
+
+```text
+MongoDB
+Firebase
+Supabase
+PostgreSQL
+SQLite
+```
+
+The JSON store must remain.
+
+---
+
+# 30. VERIFY TRANSACTION PERSISTENCE
+
+After:
+
+```text
+میں نے علی کو دو ہزار روپے دیے
+```
+
+the transaction must actually appear in:
+
+```text
+transactions.json
+```
+
+Verify:
+
+```text
+type = given
+amount = 2000
+person = علی
+```
+
+Then reload/read the ledger and verify it still exists.
+
+Do not consider an HTTP 200 alone proof of persistence.
+
+---
+
+# 31. PRESERVE STORE SAFETY
+
+Do not break the existing guarantees in:
+
+```text
+artifacts/api-server/src/lib/store.ts
+```
+
+Preserve:
+
+* atomic temp-file + rename
+* serialized mutations
+* corrupt JSON throws
+* no silent fallback to empty array
+
+NEVER change corrupt storage behavior into:
+
+```typescript
+return [];
+```
+
+because that can destroy the ledger on the next write.
+
+---
+
+# 32. VERIFY QUERY PIPELINE
+
+After saving:
+
+```text
+given 2000 Ali
+received 500 Ali
+```
+
+query:
+
+```json
+{
+  "query_type": "person_balance",
+  "person": "علی"
+}
+```
+
+Expected:
+
+```text
+1500
+```
+
+This must come from the deterministic finance engine.
+
+---
+
+# 33. VERIFY TTS
+
+Once the transaction pipeline works, verify:
+
+```text
+POST /api/voice/speak
+```
+
+using Uplift AI.
+
+Confirm:
+
+```text
+text
+↓
+Uplift TTS
+↓
+audio
+↓
+base64
+↓
+Expo playback
+```
+
+TTS failure must NOT undo a successfully saved transaction.
+
+If saving succeeded but TTS fails, the UI should say something equivalent to:
+
+```text
+Transaction saved, but I couldn't speak the response.
+```
+
+---
+
+# 34. UPLIFT PHRASE REPLACEMENTS
+
+The application can optionally use Uplift's phrase replacement feature for better Urdu pronunciation.
+
+Do NOT make this a blocker for fixing STT.
+
+If implementing it, use:
+
+```typescript
+client.tts.phraseReplacements.create({
+  phraseReplacements: [
+    {
+      phrase: "Meezan Bank",
+      replacement: "میزان بینک",
+    },
+  ],
+});
+```
+
+Then pass:
+
+```typescript
+phraseReplacementConfigId
+```
+
+to TTS.
+
+This should be server-side.
+
+Useful examples for Awaz Khata may include:
+
+```text
+Meezan Bank → میزان بینک
+JazzCash → جاز کیش
+Easypaisa → ایزی پیسہ
+ATM → اے ٹی ایم
+API → اے پی آئی
+```
+
+Only add phrase replacements that actually improve pronunciation.
+
+Do not add hundreds of unnecessary replacements.
+
+---
+
+# 35. TTS LANGUAGE / VOICE
+
+The current voice is:
+
+```text
+v_meklc281
+```
+
+Preserve it unless there is a verified reason to change it.
+
+Do not break existing Urdu speech output while repairing STT.
+
+---
+
+# 36. API CONTRACT
+
+The source of truth remains:
+
+```text
+lib/api-spec/openapi.yaml
+```
+
+If frontend/backend response shapes are inconsistent:
+
+1. inspect OpenAPI
+2. correct the contract if needed
+3. regenerate clients
+4. update implementation
+
+Use:
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
+```
+
+Do not manually patch generated files as the permanent solution.
+
+---
+
+# 37. VERIFY TRANSCRIPT RESPONSE
+
+The frontend and backend must agree on the response shape.
+
+For example:
+
+```json
+{
+  "text": "میں نے علی کو دو ہزار روپے دیے"
+}
+```
+
+If the backend returns:
+
+```json
+{
+  "transcript": "..."
+}
+```
+
+and the frontend expects:
+
+```json
+{
+  "text": "..."
+}
+```
+
+fix the contract.
+
+Do not create scattered fallback logic such as:
+
+```typescript
+response.text || response.transcript || response.result?.text
+```
+
+unless there is a genuine backward-compatibility requirement.
+
+Prefer one clear contract.
+
+---
+
+# 38. CHECK API BASE URL
+
+Verify Expo still uses:
+
+```text
+EXPO_PUBLIC_DOMAIN
+```
+
+and calls:
+
+```text
+https://<domain>/api/...
+```
+
+Make sure recent UI changes did not introduce:
+
+```text
+localhost
+127.0.0.1
+old port
+old endpoint
+HTTP instead of HTTPS
+```
+
+---
+
+# 39. CHECK REPLIT WORKFLOWS
+
+Verify:
+
+```text
+API Server
+expo
+```
+
+work correctly.
+
+The API server must actually be reachable from the Expo application.
+
+Do not assume the Replit workflow configuration is correct.
+
+Test the actual endpoint.
+
+---
+
+# 40. DO NOT CHANGE SECRETS TO PUBLIC ENVIRONMENT VARIABLES
+
+Never do:
+
+```text
+EXPO_PUBLIC_UPLIFTAI_API_KEY
+EXPO_PUBLIC_GROQ_API_KEY
+EXPO_PUBLIC_OPENAI_API_KEY
+```
+
+Only:
+
+```text
+UPLIFTAI_API_KEY
+LLM_API_KEY
+```
+
+must exist server-side.
+
+---
+
+# 41. IMPROVE SERVER-SIDE DIAGNOSTICS
+
+During debugging, add safe structured logs such as:
+
+```text
+[VOICE] request received
+[VOICE] audio filename: recording.m4a
+[VOICE] audio MIME: audio/mp4
+[VOICE] audio size: 123456
+[VOICE] STT request started
+[VOICE] STT success
+[VOICE] transcript length: 42
+[VOICE] extraction started
+[VOICE] extraction success
+[VOICE] transaction save started
+[VOICE] transaction save success
+[VOICE] TTS started
+[VOICE] TTS success
+```
+
+For Uplift failures include:
+
+```text
+statusCode
+code
+requestId
+```
+
+NEVER log API keys or authorization headers.
+
+---
+
+# 42. DO NOT HIDE ERRORS
+
+Never use a universal catch like:
+
+```typescript
+catch {
+  setError("Unable to listen");
+}
+```
+
+That is specifically part of the current problem.
+
+Errors must be classified.
+
+For example:
+
+```text
+Microphone permission
+Recording
+Upload
+STT
+Extraction
+Transaction
+TTS
+```
+
+must remain distinguishable.
+
+---
+
+# 43. PREVENT FALSE SUCCESS
+
+A transaction confirmation may ONLY be generated after the backend confirms the transaction was persisted.
+
+Correct:
+
+```text
+STT
+↓
+Extraction
+↓
+Validation
+↓
+Save
+↓
+Save success
+↓
+Confirmation
+↓
+TTS
+```
+
+Incorrect:
+
+```text
+STT
+↓
+Extraction
+↓
+"Saved!"
+↓
+Save
+```
+
+Never produce false confirmations.
+
+---
+
+# 44. TEST ALL ORIGINAL DEMO COMMANDS
+
+These exact commands must work:
+
+### Expense
+
+```text
+آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے
+```
+
+### Given
+
+```text
+میں نے علی کو دو ہزار روپے دیے
+```
+
+### Received
+
+```text
+علی نے پانچ سو روپے واپس کیے
+```
+
+### Daily spending
+
+```text
+میں نے آج کتنے پیسے خرچ کیے؟
+```
+
+### Person balance
+
+```text
+علی کے کتنے پیسے باقی ہیں؟
+```
+
+### Monthly top category
+
+```text
+اس مہینے میرا سب سے زیادہ خرچہ کہاں ہوا؟
+```
+
+---
+
+# 45. TEST THE API LAYERS INDEPENDENTLY
+
+Run tests for:
+
+```text
+1. Uplift STT
+2. /api/voice/transcribe
+3. /api/voice/extract
+4. /api/transactions
+5. /api/query
+6. /api/voice/speak
+```
+
+This is important.
+
+If the full pipeline fails, identify the exact failing layer.
+
+Do not simply repeatedly test the whole app without isolating the failure.
+
+---
+
+# 46. TEST WITH A REAL DEVICE
+
+Do not consider voice fixed just because:
+
+```bash
+curl /api/voice/extract
+```
+
+works.
+
+That only proves the extraction layer.
+
+The actual acceptance test must happen through:
+
+```text
+Real phone microphone
+↓
+Expo
+↓
+Backend
+↓
+Uplift STT
+```
+
+---
+
+# 47. REGRESSION TESTS
+
+Add/update tests for:
+
+### STT
+
+```text
+Urdu
+Roman Urdu
+English
+mixed speech
+empty transcript
+Uplift authentication error
+Uplift rate limit
+Uplift insufficient balance
+provider error
+```
+
+### Extraction
+
+```text
+expense
+income
+given
+received
+query
+unknown
+```
+
+### Storage
+
+```text
+create
+read
+update if applicable
+atomic write
+corrupt JSON behavior
+```
+
+### Finance
+
+```text
+daily total
+monthly total
+category total
+person balance
+```
+
+---
+
+# 48. RUN PROJECT VALIDATION
+
+After implementation:
+
+```bash
+pnpm run typecheck
+```
+
+Then:
+
+```bash
+pnpm run build
+```
+
+Then:
+
+```bash
+pnpm --filter @workspace/api-server test
+```
+
+If code generation changed:
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
+pnpm run typecheck
+pnpm run build
+```
+
+Fix all TypeScript/build/test errors caused by your changes.
+
+Do not leave compilation errors.
+
+---
+
+# 49. DO NOT SEED OR RESET USER DATA
+
+Do NOT automatically run:
+
+```bash
+pnpm --filter @workspace/api-server run seed
+```
+
+during the fix.
+
+Do not overwrite:
+
+```text
+transactions.json
+```
+
+Use isolated temporary data for tests.
+
+---
+
+# 50. GIT-BASED REGRESSION ANALYSIS
+
+Before making major changes, inspect:
+
+```bash
+git status
+git diff
+git log --oneline -15
+```
+
+Determine which recent commit/change affected:
+
+```text
+voice recording
+voice API
+Uplift integration
+API client
+transaction creation
+store
+```
+
+If the previous version contains a known-good implementation, restore that portion rather than unnecessarily rewriting it.
+
+The objective is to recover known-good behavior.
+
+---
+
+# 51. IMPORTANT — MINIMAL CHANGES
+
+Prefer:
+
+```text
+small root-cause fix
+```
+
+over:
+
+```text
+complete rewrite
+```
+
+Do not replace working architecture merely because another implementation looks cleaner.
+
+Every changed file must have a reason.
+
+---
+
+# 52. FINAL END-TO-END ACCEPTANCE TEST
+
+The application is NOT fixed until this works:
+
+```text
+User opens app
+        ↓
+Presses microphone
+        ↓
+Permission works
+        ↓
+Recording starts
+        ↓
+User says:
+"میں نے علی کو دو ہزار روپے دیے"
+        ↓
+Recording stops
+        ↓
+Audio uploaded
+        ↓
+Backend receives real audio
+        ↓
+Uplift SDK receives Buffer
+        ↓
+Correct fileName is provided
+        ↓
+Uplift Scribe transcribes
+        ↓
+Transcript returned
+        ↓
+LLM extracts:
+given / 2000 / علی
+        ↓
+Backend validates
+        ↓
+transactions.json updated
+        ↓
+Ledger displays transaction
+        ↓
+Finance engine can query Ali's balance
+        ↓
+Uplift TTS generates response
+        ↓
+Phone speaks confirmation
+```
+
+Then repeat with:
+
+```text
+آج میں نے آٹھ سو روپے پٹرول پر خرچ کیے
+```
+
+and:
+
+```text
+علی نے پانچ سو روپے واپس کیے
+```
+
+and:
+
+```text
+میں نے آج کتنے پیسے خرچ کیے؟
+```
+
+and:
+
+```text
+علی کے کتنے پیسے باقی ہیں؟
+```
+
+---
+
+# 53. FINAL REPORT REQUIRED
+
+When everything is complete, report exactly:
+
+```text
+ROOT CAUSE
+----------
+
+What actually broke?
+
+
+UPLIFT STT
+----------
+
+SDK used:
+Model:
+Language handling:
+Buffer handling:
+fileName handling:
+Status:
+
+
+VOICE RECORDING
+---------------
+
+Microphone:
+Recording:
+Upload:
+Status:
+
+
+EXTRACTION
+----------
+
+Status:
+
+
+TRANSACTION STORAGE
+-------------------
+
+Status:
+
+
+FINANCE ENGINE
+--------------
+
+Status:
+
+
+TTS
+---
+
+Status:
+
+
+TESTS
+-----
+
+typecheck:
+build:
+backend tests:
+STT:
+Urdu:
+Roman Urdu:
+English:
+mixed speech:
+extraction:
+transaction persistence:
+query:
+TTS:
+real-device end-to-end:
+
+
+FILES CHANGED
+-------------
+
+List important files.
+
+
+FINAL RESULT
+------------
+
+Explain in a few sentences why the voice pipeline is now reliable.
+```
+
+---
+
+# 🚨 FINAL NON-NEGOTIABLE RULES
+
+1. **Do not redesign the UI.**
+2. **Do not migrate storage.**
+3. **Do not move secrets to Expo.**
+4. **Do not move financial calculations into the LLM.**
+5. **Use `@upliftai/sdk-js` for Uplift STT.**
+6. **Use `Buffer` for backend audio when receiving uploaded audio.**
+7. **Always provide `fileName` when passing a Buffer/Stream to Uplift.**
+8. **The filename must match the actual audio format.**
+9. **Use the `scribe` STT model.**
+10. **Pass the selected language to Uplift where supported.**
+11. **Do not invent unsupported language codes.**
+12. **Use Uplift typed errors and request IDs for diagnostics.**
+13. **Do not hide every error behind "Unable to listen".**
+14. **Do not save a transaction before successful extraction and validation.**
+15. **Do not speak a save confirmation before persistence succeeds.**
+16. **Do not declare success based only on HTTP 200. Verify `transactions.json`.**
+17. **Do not destroy existing transaction data.**
+18. **Do not add duplicate retry loops around Uplift SDK retries.**
+19. **Do not rewrite working components without identifying a root cause.**
+20. **Test the actual microphone → STT → extraction → save → query → TTS pipeline on a real device.**
+
+## THE OBJECTIVE
+
+Restore Awaz Khata to a state where voice input is **reliable, debuggable, multilingual-ready, financially safe, and production-quality**.
+
+The most important thing is not making the code look cleaner.
+
+The most important thing is that when a Pakistani user presses the microphone and says:
+
+> **"میں نے علی کو دو ہزار روپے دیے"**
+
+Awaz Khata actually understands it, records:
+
+```text
+Given
+Ali
+PKR 2,000
+```
+
+persists it correctly, updates the ledger, calculates future balances correctly, and speaks the confirmation back to the user.
+
+**Find the root cause. Fix it properly. Prove it works. Do not mask the problem.**

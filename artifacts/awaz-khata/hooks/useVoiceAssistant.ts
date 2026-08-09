@@ -349,7 +349,7 @@ export function useVoiceAssistant() {
       setReplyMeta(null);
       let text: string;
       try {
-        text = await transcribeRecording(uri);
+        text = await transcribeRecording(uri, prefs.voiceLanguage);
         if (!active()) return;
         setTranscript(text);
       } catch (err) {

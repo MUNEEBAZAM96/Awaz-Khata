@@ -1,4 +1,5 @@
 - [api-zod barrel after codegen](api-zod-barrel-collision.md) — codegen does NOT clobber the hand-written barrel; just add new type/enum names to its explicit exports (zod consts are PascalCase); typecheck:libs catches misses.
+- [Uplift STT language constraint](uplift-stt-language-constraint.md) — SDK types language as `'ur'` only; always pass hardcoded "ur" in the SDK call, keep sttLanguageFor() mapping for future extension.
 - [Awaz Khata product spec](awaz-khata-product-spec.md) — user spec forbids adding a database; spoken save confirmations use conversational «جی، میں نے سن لیا اور …» wording built only after save.
 - [Expo web font blanking](expo-web-font-screenshots.md) — blank white web screenshots usually mean fonts are still downloading, not a crash; wait ~30 s and retry before debugging.
 - [Typecheck requires built libs](typecheck-libs-ordering.md) — api-server typecheck fails with TS6305 unless root `pnpm run typecheck:libs` built lib dist first.
