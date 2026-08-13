@@ -187,7 +187,72 @@ const en = {
     about: 'About',
     version: 'Version',
 
+    account: 'Account',
+    signedIn: 'Signed in',
+    signOut: 'Sign out',
+    signOutTitle: 'Sign out?',
+    signOutBody: 'Your preferences stay on this device. You can sign back in any time.',
+
     unavailable: 'Not available yet',
+  },
+
+  auth: {
+    signInTitle: 'Welcome back',
+    signInSubtitle: 'Sign in to carry on with your khata.',
+    signUpTitle: 'Welcome to Awaz Khata',
+    signUpSubtitle: 'Keep track of your money just by speaking.',
+
+    continueWithGoogle: 'Continue with Google',
+    connectingGoogle: 'Connecting…',
+    dividerOr: 'or',
+
+    email: 'Email',
+    emailPlaceholder: 'you@example.com',
+    password: 'Password',
+    passwordPlaceholder: 'Your password',
+    passwordHint: 'At least 8 characters.',
+
+    signIn: 'Sign in',
+    signingIn: 'Signing in…',
+    createAccount: 'Create account',
+    creatingAccount: 'Creating account…',
+
+    noAccount: "Don't have an account?",
+    signUpLink: 'Sign up',
+    haveAccount: 'Already have an account?',
+    signInLink: 'Sign in',
+
+    verifyTitle: 'Check your email',
+    verifySubtitle: 'We sent a 6-digit code to {email}.',
+    code: 'Verification code',
+    codePlaceholder: '123456',
+    verify: 'Verify email',
+    verifying: 'Verifying…',
+    resend: 'Send a new code',
+    resent: 'A new code is on its way.',
+
+    googleNeedsBuild: 'Google sign-in needs the installed app, not Expo Go. Use email for now.',
+
+    errorEmailRequired: 'Enter your email address.',
+    errorEmailInvalid: "That email address doesn't look right.",
+    errorPasswordRequired: 'Enter your password.',
+    errorPasswordShort: 'Use at least 8 characters.',
+    errorCodeRequired: 'Enter the 6-digit code.',
+    errorCredentials: 'That email or password is not correct.',
+    errorEmailTaken: 'An account already exists for this email.',
+    errorPasswordWeak: 'Choose a stronger password.',
+    errorCodeInvalid: 'That code is not correct.',
+    errorCodeExpired: 'That code has expired. Ask for a new one.',
+    errorGoogleCancelled: 'Google sign-in was cancelled.',
+    errorGoogleFailed: "Couldn't sign in with Google. Please try again.",
+    errorNetwork: "Couldn't reach the server. Check your connection.",
+    errorTooManyAttempts: 'Too many attempts. Wait a moment and try again.',
+    errorGeneric: 'Something went wrong. Please try again.',
+
+    a11yShowPassword: 'Show password',
+    a11yHidePassword: 'Hide password',
+    a11yErrorLabel: 'Error',
+    a11yLoading: 'Please wait',
   },
 
   onboarding: {

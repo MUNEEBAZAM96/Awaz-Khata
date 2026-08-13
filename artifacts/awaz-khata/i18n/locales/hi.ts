@@ -190,6 +190,72 @@ const hi: Strings = {
     version: 'संस्करण',
 
     unavailable: 'अभी उपलब्ध नहीं',
+
+    account: 'खाता',
+    signedIn: 'साइन इन हैं',
+    signOut: 'साइन आउट',
+    signOutTitle: 'साइन आउट करें?',
+    signOutBody: 'आपकी पसंद इसी फ़ोन पर रहेगी। आप जब चाहें दोबारा साइन इन कर सकते हैं।',
+  },
+
+  auth: {
+    signInTitle: 'अपने खाते में वापस आएँ',
+    signInSubtitle: 'साइन इन करें और अपना खाता वहीं से जारी रखें।',
+    signUpTitle: 'आवाज़ खाता में आपका स्वागत है',
+    signUpSubtitle: 'अपने पैसों का हिसाब, बस बोलकर।',
+
+    continueWithGoogle: 'गूगल के साथ जारी रखें',
+    connectingGoogle: 'जुड़ रहे हैं…',
+    dividerOr: 'या',
+
+    email: 'ईमेल',
+    emailPlaceholder: 'you@example.com',
+    password: 'पासवर्ड',
+    passwordPlaceholder: 'आपका पासवर्ड',
+    passwordHint: 'कम से कम 8 अक्षर।',
+
+    signIn: 'साइन इन करें',
+    signingIn: 'साइन इन हो रहा है…',
+    createAccount: 'खाता बनाएँ',
+    creatingAccount: 'खाता बन रहा है…',
+
+    noAccount: 'खाता नहीं है?',
+    signUpLink: 'खाता बनाएँ',
+    haveAccount: 'पहले से खाता है?',
+    signInLink: 'साइन इन करें',
+
+    verifyTitle: 'अपना ईमेल देखें',
+    verifySubtitle: 'हमने {email} पर 6 अंकों का कोड भेजा है।',
+    code: 'सत्यापन कोड',
+    codePlaceholder: '123456',
+    verify: 'ईमेल सत्यापित करें',
+    verifying: 'सत्यापन हो रहा है…',
+    resend: 'नया कोड भेजें',
+    resent: 'नया कोड भेज दिया गया है।',
+
+    googleNeedsBuild:
+      'गूगल साइन इन के लिए ऐप का इंस्टॉल किया हुआ संस्करण चाहिए, Expo Go नहीं। फ़िलहाल ईमेल इस्तेमाल करें।',
+
+    errorEmailRequired: 'अपना ईमेल पता लिखें।',
+    errorEmailInvalid: 'यह ईमेल पता सही नहीं लगता।',
+    errorPasswordRequired: 'अपना पासवर्ड लिखें।',
+    errorPasswordShort: 'कम से कम 8 अक्षर इस्तेमाल करें।',
+    errorCodeRequired: '6 अंकों का कोड लिखें।',
+    errorCredentials: 'ईमेल या पासवर्ड सही नहीं है।',
+    errorEmailTaken: 'इस ईमेल पर पहले से खाता मौजूद है।',
+    errorPasswordWeak: 'ज़्यादा मज़बूत पासवर्ड चुनें।',
+    errorCodeInvalid: 'यह कोड सही नहीं है।',
+    errorCodeExpired: 'इस कोड की अवधि ख़त्म हो गई। नया कोड मँगवाएँ।',
+    errorGoogleCancelled: 'गूगल साइन इन रद्द कर दिया गया।',
+    errorGoogleFailed: 'गूगल से साइन इन नहीं हो सका। दोबारा कोशिश करें।',
+    errorNetwork: 'सर्वर तक नहीं पहुँच सके। अपना इंटरनेट देखें।',
+    errorTooManyAttempts: 'बहुत ज़्यादा कोशिशें। थोड़ी देर बाद दोबारा कोशिश करें।',
+    errorGeneric: 'कुछ ग़लत हो गया। दोबारा कोशिश करें।',
+
+    a11yShowPassword: 'पासवर्ड दिखाएँ',
+    a11yHidePassword: 'पासवर्ड छिपाएँ',
+    a11yErrorLabel: 'त्रुटि',
+    a11yLoading: 'प्रतीक्षा करें',
   },
 
   onboarding: {

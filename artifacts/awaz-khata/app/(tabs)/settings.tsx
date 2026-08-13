@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import { useClerk, useUser } from '@clerk/expo';
 import {
   Contrast,
   Eye,
   Info,
   Languages,
+  LogOut,
+  Mail,
   Moon,
   Type,
   User,
@@ -14,8 +17,10 @@ import {
   Volume2,
 } from 'lucide-react-native';
 import { Text } from '@/components/ui/Text';
+import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Segmented } from '@/components/ui/Segmented';
 import { SettingsRow, SettingsSection } from '@/components/settings/SettingsRow';
 import { LanguageOption } from '@/components/settings/LanguageOption';
@@ -30,8 +35,29 @@ export default function SettingsScreen() {
   const t = useT();
   const { lang, setLanguage } = useI18n();
   const { prefs, setPreference } = usePreferences();
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
   const [picker, setPicker] = useState<'app' | 'voice' | null>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const email = user?.primaryEmailAddress?.emailAddress ?? '';
+  // Clerk's own name (from Google, or entered at sign-up) if there is one;
+  // otherwise the email is the only identity worth showing.
+  const accountName = user?.fullName ?? '';
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      // Clears the secure token cache. The root gate then routes to sign-in.
+      await signOut();
+    } finally {
+      setSigningOut(false);
+      setConfirmSignOut(false);
+    }
+  };
 
   const version =
     (Constants.expoConfig?.version as string | undefined) ?? '1.0.0';
@@ -49,6 +75,31 @@ export default function SettingsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text variant="headingLarge">{t('settings.title')}</Text>
+
+        {/* Clerk account. The signed-in identity, kept distinct from the
+            on-device display name below. */}
+        <SettingsSection title={t('settings.account')}>
+          {accountName ? (
+            <SettingsRow
+              kind="static"
+              icon={User}
+              label={t('settings.signedIn')}
+              value={accountName}
+            />
+          ) : null}
+          {email ? (
+            <SettingsRow kind="static" icon={Mail} label={t('auth.email')} value={email} />
+          ) : null}
+          <View style={{ padding: spacing.lg }}>
+            <Button
+              label={t('settings.signOut')}
+              icon={LogOut}
+              variant="danger"
+              onPress={() => setConfirmSignOut(true)}
+              fullWidth
+            />
+          </View>
+        </SettingsSection>
 
         {/* Profile */}
         <SettingsSection title={t('settings.profile')}>
@@ -199,6 +250,17 @@ export default function SettingsScreen() {
           ))}
         </View>
       </BottomSheet>
+
+      <ConfirmDialog
+        visible={confirmSignOut}
+        title={t('settings.signOutTitle')}
+        body={t('settings.signOutBody')}
+        confirmLabel={t('settings.signOut')}
+        destructive
+        loading={signingOut}
+        onConfirm={handleSignOut}
+        onCancel={() => setConfirmSignOut(false)}
+      />
     </View>
   );
 }

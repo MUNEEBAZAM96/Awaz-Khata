@@ -188,6 +188,72 @@ const skr: Strings = {
     version: 'ورژن',
 
     unavailable: 'ہݨ دستیاب نہیں',
+
+    account: 'اکاؤنٹ',
+    signedIn: 'سائن اِن ہو',
+    signOut: 'سائن آؤٹ',
+    signOutTitle: 'سائن آؤٹ کرݨا ہے؟',
+    signOutBody: 'تہاݙیاں ترجیحاں ایں فون تے ہی رہسن۔ تساں جݙاں چاہو ولدا سائن اِن کر سڳدے ہو۔',
+  },
+
+  auth: {
+    signInTitle: 'اپݨے کھاتے وچ ولدے آؤ',
+    signInSubtitle: 'سائن اِن کرو تے اپݨا کھاتہ اُتھوں ہی جاری رکھو۔',
+    signUpTitle: 'آواز کھاتہ وچ ڀلے آۓ',
+    signUpSubtitle: 'اپݨے پیسیاں دا حساب، بس ڳالھ کر کے۔',
+
+    continueWithGoogle: 'گوگل نال جاری رکھو',
+    connectingGoogle: 'رابطہ تھی رہیا ہے…',
+    dividerOr: 'یا',
+
+    email: 'ای میل',
+    emailPlaceholder: 'you@example.com',
+    password: 'پاس ورڈ',
+    passwordPlaceholder: 'اپݨا پاس ورڈ',
+    passwordHint: 'گھٹ کنوں گھٹ ۸ حرف۔',
+
+    signIn: 'سائن اِن کرو',
+    signingIn: 'سائن اِن تھی رہیا ہے…',
+    createAccount: 'اکاؤنٹ بݨاؤ',
+    creatingAccount: 'اکاؤنٹ بݨ رہیا ہے…',
+
+    noAccount: 'اکاؤنٹ کائنی؟',
+    signUpLink: 'اکاؤنٹ بݨاؤ',
+    haveAccount: 'پہلے کنوں اکاؤنٹ ہے؟',
+    signInLink: 'سائن اِن کرو',
+
+    verifyTitle: 'اپݨی ای میل ݙیکھو',
+    verifySubtitle: 'اساں {email} تے ۶ ہندسیاں دا کوڈ ڳھلیا ہے۔',
+    code: 'تصدیقی کوڈ',
+    codePlaceholder: '123456',
+    verify: 'ای میل دی تصدیق کرو',
+    verifying: 'تصدیق تھی رہی ہے…',
+    resend: 'نواں کوڈ ڳھلو',
+    resent: 'نواں کوڈ ڳھل ڳیا ہے۔',
+
+    googleNeedsBuild:
+      'گوگل سائن اِن کیتے ایپ دا انسٹال شدہ ورژن چاہیدا ہے، Expo Go کائنی۔ فی الحال ای میل ورتو۔',
+
+    errorEmailRequired: 'اپݨا ای میل پتہ لکھو۔',
+    errorEmailInvalid: 'ایہہ ای میل پتہ ٹھیک کائنی لڳدا۔',
+    errorPasswordRequired: 'اپݨا پاس ورڈ لکھو۔',
+    errorPasswordShort: 'گھٹ کنوں گھٹ ۸ حرف ورتو۔',
+    errorCodeRequired: '۶ ہندسیاں دا کوڈ لکھو۔',
+    errorCredentials: 'ای میل یا پاس ورڈ ٹھیک کائنی۔',
+    errorEmailTaken: 'ایں ای میل تے پہلے کنوں اکاؤنٹ موجود ہے۔',
+    errorPasswordWeak: 'ودھ مضبوط پاس ورڈ چُݨو۔',
+    errorCodeInvalid: 'ایہہ کوڈ ٹھیک کائنی۔',
+    errorCodeExpired: 'ایں کوڈ دی میعاد مُک ڳئی۔ نواں کوڈ منڳواؤ۔',
+    errorGoogleCancelled: 'گوگل سائن اِن منسوخ تھی ڳیا۔',
+    errorGoogleFailed: 'گوگل نال سائن اِن نہ تھی سڳیا۔ ولدا کوشش کرو۔',
+    errorNetwork: 'سرور تئیں رسائی نہ تھی سڳی۔ اپݨا انٹرنیٹ ݙیکھو۔',
+    errorTooManyAttempts: 'ولا ولا کوششاں۔ تھوڑی ڳھڑی بعد ولدا کوشش کرو۔',
+    errorGeneric: 'کجھ غلط تھی ڳیا۔ ولدا کوشش کرو۔',
+
+    a11yShowPassword: 'پاس ورڈ ݙکھاؤ',
+    a11yHidePassword: 'پاس ورڈ لُکاؤ',
+    a11yErrorLabel: 'خرابی',
+    a11yLoading: 'انتظار کرو',
   },
 
   onboarding: {

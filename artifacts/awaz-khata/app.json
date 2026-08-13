@@ -14,9 +14,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.awazkhata.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.awazkhata.app"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -29,7 +32,10 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-audio"
+      "expo-audio",
+      "@clerk/expo",
+      "@clerk/expo-google-signin",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

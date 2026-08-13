@@ -188,6 +188,72 @@ const ur: Strings = {
     version: 'ورژن',
 
     unavailable: 'ابھی دستیاب نہیں',
+
+    account: 'اکاؤنٹ',
+    signedIn: 'سائن اِن ہیں',
+    signOut: 'سائن آؤٹ',
+    signOutTitle: 'سائن آؤٹ کریں؟',
+    signOutBody: 'آپ کی ترجیحات اسی فون پر محفوظ رہیں گی۔ آپ جب چاہیں دوبارہ سائن اِن کر سکتے ہیں۔',
+  },
+
+  auth: {
+    signInTitle: 'اپنے کھاتے میں واپس آئیں',
+    signInSubtitle: 'سائن اِن کریں اور اپنا کھاتہ وہیں سے جاری رکھیں۔',
+    signUpTitle: 'آواز کھاتہ میں خوش آمدید',
+    signUpSubtitle: 'اپنے پیسوں کا حساب، بس بول کر۔',
+
+    continueWithGoogle: 'گوگل کے ساتھ جاری رکھیں',
+    connectingGoogle: 'رابطہ ہو رہا ہے…',
+    dividerOr: 'یا',
+
+    email: 'ای میل',
+    emailPlaceholder: 'you@example.com',
+    password: 'پاس ورڈ',
+    passwordPlaceholder: 'اپنا پاس ورڈ',
+    passwordHint: 'کم از کم ۸ حروف۔',
+
+    signIn: 'سائن اِن کریں',
+    signingIn: 'سائن اِن ہو رہا ہے…',
+    createAccount: 'اکاؤنٹ بنائیں',
+    creatingAccount: 'اکاؤنٹ بن رہا ہے…',
+
+    noAccount: 'اکاؤنٹ نہیں ہے؟',
+    signUpLink: 'اکاؤنٹ بنائیں',
+    haveAccount: 'پہلے سے اکاؤنٹ ہے؟',
+    signInLink: 'سائن اِن کریں',
+
+    verifyTitle: 'اپنی ای میل دیکھیں',
+    verifySubtitle: 'ہم نے {email} پر ۶ ہندسوں کا کوڈ بھیجا ہے۔',
+    code: 'تصدیقی کوڈ',
+    codePlaceholder: '123456',
+    verify: 'ای میل کی تصدیق کریں',
+    verifying: 'تصدیق ہو رہی ہے…',
+    resend: 'نیا کوڈ بھیجیں',
+    resent: 'نیا کوڈ بھیج دیا گیا ہے۔',
+
+    googleNeedsBuild:
+      'گوگل سائن اِن کے لیے ایپ کا انسٹال شدہ ورژن چاہیے، Expo Go نہیں۔ فی الحال ای میل استعمال کریں۔',
+
+    errorEmailRequired: 'اپنا ای میل پتہ لکھیں۔',
+    errorEmailInvalid: 'یہ ای میل پتہ درست نہیں لگتا۔',
+    errorPasswordRequired: 'اپنا پاس ورڈ لکھیں۔',
+    errorPasswordShort: 'کم از کم ۸ حروف استعمال کریں۔',
+    errorCodeRequired: '۶ ہندسوں کا کوڈ لکھیں۔',
+    errorCredentials: 'ای میل یا پاس ورڈ درست نہیں۔',
+    errorEmailTaken: 'اس ای میل پر پہلے سے اکاؤنٹ موجود ہے۔',
+    errorPasswordWeak: 'زیادہ مضبوط پاس ورڈ منتخب کریں۔',
+    errorCodeInvalid: 'یہ کوڈ درست نہیں۔',
+    errorCodeExpired: 'اس کوڈ کی میعاد ختم ہو گئی۔ نیا کوڈ منگوائیں۔',
+    errorGoogleCancelled: 'گوگل سائن اِن منسوخ کر دیا گیا۔',
+    errorGoogleFailed: 'گوگل سے سائن اِن نہیں ہو سکا۔ دوبارہ کوشش کریں۔',
+    errorNetwork: 'سرور تک رسائی نہیں ہو سکی۔ اپنا انٹرنیٹ دیکھیں۔',
+    errorTooManyAttempts: 'بہت زیادہ کوششیں۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔',
+    errorGeneric: 'کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔',
+
+    a11yShowPassword: 'پاس ورڈ دکھائیں',
+    a11yHidePassword: 'پاس ورڈ چھپائیں',
+    a11yErrorLabel: 'خرابی',
+    a11yLoading: 'انتظار کریں',
   },
 
   onboarding: {
