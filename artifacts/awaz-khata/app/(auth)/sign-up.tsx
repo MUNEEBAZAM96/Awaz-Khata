@@ -87,7 +87,7 @@ export default function SignUpScreen() {
 
     setSubmitting(true);
     try {
-      const { error } = await signUp.create({
+      const { error } = await signUp.password({
         emailAddress: email.trim(),
         password,
       });
